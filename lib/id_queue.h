@@ -1,7 +1,6 @@
-#ifndef ID_QUEUE_H
-#define ID_QUEUE_H
+#pragma once
 
-#include "constants.h"
+#include "src/data-types.h"
 #include <vector>
 #include <algorithm>
 #include <cassert>
@@ -174,5 +173,3 @@ private:
 
 	unsigned heap_size;
 };
-
-#endif
