@@ -6,7 +6,9 @@ project_inc_dirs = include_directories('.')
 
 # List of source files for the crp library
 lib_source_files = [
-    'graph.cpp'
+    'graph.cpp',
+    'partitioner\\bfs-partitioner.cpp',
+    'partitioner\\geo-data.cpp'
 ]
 
 crp_lib_includes = [project_inc_dirs, lib_includes]
