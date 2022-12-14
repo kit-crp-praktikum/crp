@@ -30,7 +30,7 @@ std::vector<T>load_vector(const std::string&file_name){
 }
 
 template<>
-void save_vector<std::string>(const std::string&file_name, const std::vector<std::string>&vec){
+inline void save_vector<std::string>(const std::string&file_name, const std::vector<std::string>&vec){
 	std::ofstream out(file_name, std::ios::binary);
 	for(unsigned i=0; i<vec.size(); ++i){
 		const char*x = vec[i].c_str();
@@ -39,7 +39,7 @@ void save_vector<std::string>(const std::string&file_name, const std::vector<std
 }
 
 template<>
-std::vector<std::string>load_vector<std::string>(const std::string&file_name){
+inline std::vector<std::string>load_vector<std::string>(const std::string&file_name){
 	std::vector<char>data = load_vector<char>(file_name);
 	std::vector<std::string>ret;
 	std::vector<char>::const_iterator 

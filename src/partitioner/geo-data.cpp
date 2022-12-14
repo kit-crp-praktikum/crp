@@ -1,14 +1,13 @@
 #include "geo-data.h"
 #include "src/data-types.h"
-//#include "lib/vector_io.h"
+#include "lib/vector_io.h"
 
 partitioner::GeoData::GeoData() {}
 
 partitioner::GeoData::GeoData(std::string latitude, std::string longitude)
 {
-    // TODO
-    /*this->latitude = load_vector<int>(latitude);
-    this->longitude = load_vector<int>(longitude);*/
+    this->latitude = load_vector<int>(latitude);
+    this->longitude = load_vector<int>(longitude);
 }
 
 partitioner::GeoData::GeoData(

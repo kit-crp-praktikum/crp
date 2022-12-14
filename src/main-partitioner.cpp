@@ -5,7 +5,7 @@
 #include "partitioner/rec-partitioner.h"
 #include "graph.h"
 
-int main2() {
+int main() {
     unsigned n = 32;
     std::vector<std::vector<std::pair<NodeId, Distance>>> gr(n);
     //path
