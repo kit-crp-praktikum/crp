@@ -13,4 +13,4 @@ lib_includes = include_directories('.')
 subdir('src')
 subdir('tests')
 
-executable('sp', 'src/main_sp.cpp')
+executable('sp', 'src/main_sp.cpp', dependencies: crp_dep)

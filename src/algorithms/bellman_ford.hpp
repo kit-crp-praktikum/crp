@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vector>
-#include "src/datastructure/timestamped_vector.hpp"
-#include "src/data-types.h"
+#include "datastructure/timestamped_vector.hpp"
+#include "data-types.h"
 #include "lib/id_queue.h"
 
 /**
