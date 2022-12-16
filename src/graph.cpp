@@ -8,12 +8,10 @@ crp::Graph::Graph(std::string first_out, std::string head, std::string weights)
     this->head = load_vector<NodeId>(head);
     this->weights = load_vector<Distance>(weights);
 }
-crp::Graph::Graph(
-    const std::vector<std::vector<std::pair<NodeId, Distance>>>& adj_list)
+crp::Graph::Graph(const AdjacencyList& adj_list)
 {
-    uint32_t n = adj_list.size();
-    for (uint32_t i = 0; i < n; i++)
-    {
+    NodeId n = adj_list.size();
+    for (NodeId i = 0; i < n; i++) {
         first_out.push_back(head.size());
         for (auto [to, w] : adj_list[i]) {
             head.push_back(to);
@@ -23,4 +21,16 @@ crp::Graph::Graph(
 
     // Sentinel at the end
     first_out.push_back(head.size());
+}
+
+crp::Graph crp::Graph::reversed() const
+{
+    AdjacencyList adj(num_nodes());
+    for (NodeId u = 0; u < num_nodes(); u++) {
+        for (auto [v, weight] : (*this)[u]) {
+            adj[v].push_back({u, weight});
+        }
+    }
+
+    return Graph{adj};
 }
