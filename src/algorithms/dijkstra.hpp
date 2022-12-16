@@ -54,7 +54,10 @@ class Dijkstra {
         template<bool update_parents = false>
         NodeId step(auto neighbors) {
             assert(!priority_queue.empty());
-            auto [v, dist] = priority_queue.pop();
+
+            auto v = priority_queue.peek().id;
+            auto dist = priority_queue.pop().key;
+
             visited[v] = true;
             distance[v] = dist;
             progress = dist;

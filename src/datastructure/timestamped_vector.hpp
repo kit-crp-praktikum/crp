@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 #include <limits>
 
@@ -19,7 +20,7 @@
 */
 template <class T>
 class TimestampedVector {
-    using Time = u_int32_t;
+    using Time = uint32_t;
 
     public:
         TimestampedVector(std::size_t size, T default_value) : 
@@ -50,7 +51,7 @@ class TimestampedVector {
             }
         }
 
-        std::vector<T>::reference operator[] (std::size_t index) {
+        typename std::vector<T>::reference operator[] (std::size_t index) {
             if(timestamps[index] != current_time) {
                 data[index] = default_value;
                 timestamps[index] = current_time;
