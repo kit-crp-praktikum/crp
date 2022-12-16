@@ -8,7 +8,9 @@
 #include "algorithms/floyd_warshall.hpp"
 #include "algorithms/dinics.hpp"
 #include "partitioner/inertial_flow.hpp"
+#include "graph.h"
 #include "data-types.h"
+#include "partitioner/preprocessing.hpp"
 
 void test_timestampled_v() {
     int def = 1, n = 100;
@@ -148,7 +150,7 @@ void test_inertial_flow() {
         }
     }
     partitioner::GeoData geo_data(x, y);
-    InertialFlowPartitioner inertial(n*n, lines, group_size);
+    partitioner::InertialFlowPartitioner inertial(n*n, lines, group_size);
     std::cout << "\ninertial flow \n";
     std::vector<bool> v = inertial.partition(graph, geo_data);
     for(int i = 0; i < n; i++) {
@@ -159,10 +161,51 @@ void test_inertial_flow() {
     }
 }
 
+void test_preprocessing() {
+    /*
+        0 -> 1    5 -- 6
+        ^    |    |    | 
+        |    v    |    |
+        3 <- 2 -> 4 -- 7
+    */
+    NodeId n = 10;
+    using AdjacencyList = std::vector<std::vector<std::pair<NodeId, Distance>>>;
+    AdjacencyList adj_list(n);
+    Distance d = 1; //increasing edge weights
+    std::vector<std::pair<NodeId, NodeId>> edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {2, 4}, 
+                  {4, 5}, {5, 4}, {5, 6}, {6, 5}, {6, 7}, {7, 6}, {4, 7}, {7, 4}};
+    for(auto [v, w] : edges) {
+        adj_list[v].push_back({w, d++});
+    }
+    crp::Graph graph(adj_list);
+    AdjacencyList new_graph = partitioner::make_undirected(graph);
+    assert(new_graph.size() == adj_list.size());
+    for(NodeId v = 0; v < n; v++) {
+        for(auto [w, dist] : new_graph[v]) {
+            if(std::min(v, w) >= 4) {
+                assert(dist == 2);
+            }
+            else {
+                assert(dist == 1);
+            }
+            bool found = false;
+            for(auto [u, dist2] : new_graph[w]) {
+                if(u == v && dist == dist2) {
+                    found = true;
+                    break;
+                }
+            }
+            assert(found);
+        }
+    }
+    std::cout << "\npreprocessing test ok \n";
+}
+
 int main() {
     test_timestampled_v();
     test_sp();
     test_flow1();
     test_flow2();
     test_inertial_flow();
+    test_preprocessing();
 }
