@@ -14,12 +14,10 @@
  *
  * Note that N should be relatively small, because the method requires N^2 memory.
  */
-inline crp::Graph generate_random_undirected_graph(NodeId N, int M, Distance W)
+inline crp::Graph generate_random_undirected_graph(NodeId N, int M, Distance W, uint64_t seed = 0xbaadf00d)
 {
     REQUIRE(M <= N * (N - 1) / 2);
-
-    std::random_device rd;
-    std::mt19937 mt(rd());
+    std::mt19937 mt(seed);
 
     // Random integer in [l, r]
     const auto& rnd_integer = [&] (int l, int r) {
