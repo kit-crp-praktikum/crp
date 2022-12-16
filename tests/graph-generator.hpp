@@ -69,5 +69,12 @@ inline crp::Graph generate_random_undirected_graph(NodeId N, int M, Distance W, 
     std::iota(labels.begin(), labels.end(), 0);
     std::shuffle(labels.begin(), labels.end(), mt);
 
-    return crp::Graph{adjlist};
+    std::vector<std::vector<std::pair<NodeId, Distance>>> adjlist2(N);
+    for (NodeId x = 0; x < N; x++) {
+        for (auto [y, w] : adjlist[x]) {
+            adjlist2[labels[x]].push_back({labels[y], w});
+        }
+    }
+
+    return crp::Graph{adjlist2};
 }
