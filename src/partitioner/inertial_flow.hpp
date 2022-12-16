@@ -1,0 +1,112 @@
+#pragma once
+
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <functional>
+#include <cassert>
+#include <math.h> 
+#include "data-types.h"
+#include "algorithms/dinics.hpp"
+#include "partitioner/geo-data.h"
+
+#include "lib/debug.h"
+
+/**
+ * Implementation of Inertial-Flow partitioner.
+*/
+class InertialFlowPartitioner {
+
+    using Longitude = uint32_t;
+    using Latitude = uint32_t;
+    using Graph = std::vector<std::vector<std::pair<NodeId, Distance>>>;
+
+    public:
+        /**
+         * @param max_num_nodes maximum number of nodes which will be used during partitioning
+         * @param number_of_lines number of lines which are used to sort the nodes. use each centered in the graph with angles 2*PI/i i in {0, ..., num_lines - 1}
+         * @param group_size size of the src/target node for the flow problem in percentage
+        */
+        InertialFlowPartitioner(uint32_t max_num_nodes, uint32_t number_of_lines, double group_size) : 
+            sorted_nodes(max_num_nodes), 
+            scalar_products(max_num_nodes),
+            number_of_lines(number_of_lines),
+            group_size(group_size) {}
+
+        std::vector<bool> partition(Graph &graph, partitioner::GeoData &geo_data) {
+            uint32_t n = graph.size();
+            assert(n == geo_data.latitude.size());
+            assert(n == geo_data.longitude.size());
+            assert(n <= sorted_nodes.size());
+            assert(group_size < 0.5);
+            assert(number_of_lines > 0);
+
+            std::iota(sorted_nodes.begin(), sorted_nodes.begin() + n, 0);
+            compute_center(geo_data);
+            
+            std::vector<NodeId> left_nodes, right_nodes;
+            std::vector<bool> best_partition, partition;
+            uint32_t best_balance = 0, balance;
+
+            DinicsFlow dinics(n);
+            for(NodeId v = 0; v < n; v++) {
+                for(auto [w, dist] : graph[v]) {
+                    if(v < w) { 
+                        dinics.add_edge(v, w, dist); //add each undirected edge only once
+                    }
+                }
+            }
+
+            for(uint32_t i = 0; i < number_of_lines; i++) {
+                double angle = i * ((2.0 * M_PI) / number_of_lines);
+                sort_by_line(cos(angle), sin(angle), geo_data);
+                for(uint32_t i = 0; i < n && ((double)i / n) < group_size; i++) {
+                    left_nodes.push_back(sorted_nodes[i]);
+                    right_nodes.push_back(sorted_nodes[n - 1 - i]);
+                }
+                partition = dinics.multi_src_target_min_cut_partition(left_nodes, right_nodes);
+                balance = std::count(partition.begin(), partition.end(), true);
+                balance = std::min(balance, n - balance);
+                if(balance >= best_balance) {
+                    std::swap(best_partition, partition);
+                    std::swap(best_balance, balance);
+                }
+                left_nodes.clear();
+                right_nodes.clear();
+            }
+            return best_partition;
+        }
+
+        void set_number_of_lines(uint32_t num_lines) {
+            number_of_lines = num_lines;
+        }
+
+        void set_group_size(double _group_size) {
+            group_size = _group_size;
+        }
+
+    private:
+        void compute_center(partitioner::GeoData &geo_data) {
+            double n = geo_data.latitude.size();
+            double center_x = std::reduce(geo_data.latitude.begin(), geo_data.latitude.end(), 0, std::plus<double>());
+            double center_y = std::reduce(geo_data.longitude.begin(), geo_data.longitude.end(), 0, std::plus<double>());
+            center_of_nodes = {center_x / n, center_y / n};
+        }
+
+        //line is defined by a * (x - center_x) + b * (y - center_y) = 0
+        void sort_by_line(double a, double b, partitioner::GeoData &geo_data) {
+            for(uint32_t i = 0; i < geo_data.latitude.size(); i++) {
+                scalar_products[i] = a * (geo_data.latitude[i] - center_of_nodes.first) + b * (geo_data.longitude[i] - center_of_nodes.second);
+            }
+            auto compare = [&](const NodeId v, const NodeId w) {
+                return scalar_products[v] < scalar_products[w];
+            };  
+            std::sort(sorted_nodes.begin(), sorted_nodes.begin() + geo_data.latitude.size(), compare);
+        }
+
+        std::vector<NodeId> sorted_nodes;
+        std::vector<double> scalar_products;
+        std::pair<double, double> center_of_nodes;
+        uint32_t number_of_lines;
+        double group_size;
+};

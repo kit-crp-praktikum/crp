@@ -7,6 +7,7 @@
 #include "algorithms/bellman_ford.hpp"
 #include "algorithms/floyd_warshall.hpp"
 #include "algorithms/dinics.hpp"
+#include "partitioner/inertial_flow.hpp"
 #include "data-types.h"
 
 void test_timestampled_v() {
@@ -114,16 +115,54 @@ void test_flow2() {
         std::cout << b << " ";
     }
     std::cout << "\n";  
-
 }
 
+void test_inertial_flow() {
+    int n = 10;
+    uint32_t lines = 10;
+    double group_size = 0.1;
+    using Node = std::pair<NodeId, Distance>;
+    std::vector<std::vector<Node>> graph(n * n);
+    std::vector<int> x(n*n);
+    std::vector<int> y(n*n);
+    auto add_edge = [&](NodeId v, NodeId w) {
+        if(v < w) { //only in one direction
+            graph[v].push_back({w, 1});
+            graph[w].push_back({v, 1});
+        }
+    };
+    int dx[4] = {0, 0, -1, 1};
+    int dy[4] = {-1, 1, 0, 0};
+    //grid graph
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            x[i * n + j] = i;
+            y[i * n + j] = j;
+            for(int k = 0; k < 4; k++) {
+                int i1 = i + dx[k];
+                int j1 = j + dy[k];
+                if(std::min(i1, j1) >= 0 && std::max(i1, j1) < n) {
+                    add_edge(i * n + j, i1 * n + j1);
+                }
+            }
+        }
+    }
+    partitioner::GeoData geo_data(x, y);
+    InertialFlowPartitioner inertial(n*n, lines, group_size);
+    std::cout << "\ninertial flow \n";
+    std::vector<bool> v = inertial.partition(graph, geo_data);
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            std::cout << v[i * n + j];
+        }
+        std::cout << "\n";
+    }
+}
 
 int main() {
-    std::cout << "hi \n";
-
     test_timestampled_v();
     test_sp();
     test_flow1();
     test_flow2();
-
+    test_inertial_flow();
 }

@@ -30,7 +30,7 @@ class DinicsFlow {
             multi_src(num_nodes),
             multi_target(num_nodes + 1),
             num_nodes(num_nodes),
-            INF_FLOW(std::numeric_limits<Flow>::max()) {}
+            INF_FLOW(std::numeric_limits<Flow>::max() / 2) {} // / 2 to avoid INF - flow overflow for flow < 0
 
         void add_edge(NodeId from, NodeId to, Flow capacity) {
             graph[from].emplace_back(to, graph[to].size(), capacity);
@@ -58,31 +58,15 @@ class DinicsFlow {
             return flow;
         }
 
-        //computes left most and right most cut, returns more balanced cut
         std::vector<bool> min_cut_partition(NodeId src, NodeId target) {
             max_flow(src, target);
-            auto is_residual = [](Edge &e) {return std::abs(e.flow) + 1 <= e.capacity;};
+            auto is_residual = [](Edge &e) {return e.has_capacity();};
             std::vector<bool> left_most(num_nodes);
-            std::vector<bool> right_most(num_nodes);
-
             generic_bfs(src, is_residual);
             for(NodeId v = 0; v < num_nodes; v++) {
                 left_most[v] = bfs_distance[v] != -1;
             }
-            
-            generic_bfs(target, is_residual);
-            for(NodeId v = 0; v < num_nodes; v++) {
-                right_most[v] = bfs_distance[v] != -1;
-            }
-            NodeId left = std::count(left_most.begin(), left_most.end(), true);
-            NodeId right = std::count(right_most.begin(), right_most.end(), true);
-
-            if(std::min(left, num_nodes - left) >= std::min(right, num_nodes - right)) {
-                return left_most;
-            }
-            else {
-                return right_most;
-            }
+            return left_most;
         }
 
         std::vector<bool> multi_src_target_min_cut_partition(std::vector<NodeId> &src_nodes, std::vector<NodeId> &target_nodes) {
@@ -103,6 +87,14 @@ class DinicsFlow {
         }
 
         void reset_multi_src_target() {
+            //delete reverse edges
+            for(Edge &e : graph[multi_src]) {
+                graph[e.to].pop_back();
+            }
+            for(Edge &e : graph[multi_target]) {
+                graph[e.to].pop_back();
+            }
+            //delete src, target outgoing edges
             graph[multi_src].clear();
             graph[multi_target].clear();
         }
