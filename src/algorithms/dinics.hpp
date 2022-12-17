@@ -58,22 +58,22 @@ class DinicsFlow {
             return flow;
         }
 
-        std::vector<bool> min_cut_partition(NodeId src, NodeId target) {
-            max_flow(src, target);
+        std::pair<uint32_t, std::vector<bool>> min_cut_partition(NodeId src, NodeId target) {
+            Flow cut_size = max_flow(src, target);
             auto is_residual = [](Edge &e) {return e.has_capacity();};
             std::vector<bool> left_most(num_nodes);
             generic_bfs(src, is_residual);
             for(NodeId v = 0; v < num_nodes; v++) {
                 left_most[v] = bfs_distance[v] != -1;
             }
-            return left_most;
+            return {cut_size, left_most};
         }
 
-        std::vector<bool> multi_src_target_min_cut_partition(std::vector<NodeId> &src_nodes, std::vector<NodeId> &target_nodes) {
+        std::pair<uint32_t, std::vector<bool>> multi_src_target_min_cut_partition(std::vector<NodeId> &src_nodes, std::vector<NodeId> &target_nodes) {
             setup_multi_src_target(src_nodes, target_nodes);
-            std::vector<bool> partition = min_cut_partition(multi_src, multi_target);
+            auto[cut_size, partition] = min_cut_partition(multi_src, multi_target);
             reset_multi_src_target();
-            return partition;
+            return {cut_size, partition};
         }
 
     private:

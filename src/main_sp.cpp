@@ -88,7 +88,7 @@ void test_flow1() {
     dinics.add_edge(4, 3, 2);
     std::cout << "\ndinics" << "\n";
     std::cout << dinics.max_flow(0, n - 1) << "\n";
-    auto v = dinics.min_cut_partition(0, n - 1);
+    auto [cut, v] = dinics.min_cut_partition(0, n - 1);
     for(auto b : v) {
         std::cout << b << " ";
     }
@@ -112,7 +112,7 @@ void test_flow2() {
     std::vector<NodeId> target = {5, 6, 7};
     std::cout << "\nmultistart dinics" << "\n";
     std::cout << dinics.multi_src_target_max_flow(src, target) << "\n";
-    auto v = dinics.multi_src_target_min_cut_partition(src, target);
+    auto [cut, v] = dinics.multi_src_target_min_cut_partition(src, target);
     for(auto b : v) {
         std::cout << b << " ";
     }

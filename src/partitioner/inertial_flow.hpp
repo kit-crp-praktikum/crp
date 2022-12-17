@@ -46,10 +46,25 @@ namespace partitioner {
                 std::iota(sorted_nodes.begin(), sorted_nodes.begin() + n, 0);
                 compute_center(geo_data);
                 
+                return minimize_edge_cut(graph, geo_data);
+            }
+
+            void set_number_of_lines(uint32_t num_lines) {
+                number_of_lines = num_lines;
+            }
+
+            void set_group_size(double _group_size) {
+                group_size = _group_size;
+            }
+
+        private:
+            std::vector<bool> minimize_edge_cut(Graph &graph, partitioner::GeoData &geo_data) {
                 std::vector<NodeId> left_nodes, right_nodes;
                 std::vector<bool> best_partition, partition;
                 uint32_t best_balance = 0, balance;
+                uint32_t best_cut = INF;
 
+                uint32_t n = graph.size();
                 DinicsFlow dinics(n);
                 for(NodeId v = 0; v < n; v++) {
                     for(auto [w, dist] : graph[v]) {
@@ -66,12 +81,13 @@ namespace partitioner {
                         left_nodes.push_back(sorted_nodes[i]);
                         right_nodes.push_back(sorted_nodes[n - 1 - i]);
                     }
-                    partition = dinics.multi_src_target_min_cut_partition(left_nodes, right_nodes);
+                    auto[cut_size, partition] = dinics.multi_src_target_min_cut_partition(left_nodes, right_nodes);
                     balance = std::count(partition.begin(), partition.end(), true);
                     balance = std::min(balance, n - balance);
-                    if(balance >= best_balance) {
+                    if(cut_size < best_cut || ((cut_size == best_cut) && balance >= best_balance)) {
                         std::swap(best_partition, partition);
                         std::swap(best_balance, balance);
+                        std::swap(best_cut, cut_size);
                     }
                     left_nodes.clear();
                     right_nodes.clear();
@@ -79,15 +95,6 @@ namespace partitioner {
                 return best_partition;
             }
 
-            void set_number_of_lines(uint32_t num_lines) {
-                number_of_lines = num_lines;
-            }
-
-            void set_group_size(double _group_size) {
-                group_size = _group_size;
-            }
-
-        private:
             void compute_center(partitioner::GeoData &geo_data) {
                 double n = geo_data.latitude.size();
                 double center_x = std::reduce(geo_data.latitude.begin(), geo_data.latitude.end(), 0, std::plus<double>());
