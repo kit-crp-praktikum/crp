@@ -6,10 +6,10 @@
 
 namespace crp
 {
-class CRPAlgorithm
+class CRPAlgorithmInterface
 {
   public:
-    virtual ~CRPAlgorithm() = default;
+    virtual ~CRPAlgorithmInterface() = default;
 
     /**
      * Phase 1: Initialize the routing algorithm for the given graph.

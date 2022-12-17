@@ -8,7 +8,7 @@
 #include "shortest-path-algorithm.h"
 #include "graph-generator.hpp"
 
-void test_algorithm(std::unique_ptr<crp::CRPAlgorithm> algorithm)
+void test_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm)
 {
     // First, generate a graph with edges only equal to 1.
     // After that, change the weights for the customization phase
@@ -45,7 +45,7 @@ void test_algorithm(std::unique_ptr<crp::CRPAlgorithm> algorithm)
     }
 }
 
-class BidirDijkstraAlgo : public crp::CRPAlgorithm
+class BidirDijkstraAlgo : public crp::CRPAlgorithmInterface
 {
   public:
     void prepare(crp::Graph *graph)
