@@ -10,7 +10,21 @@
 
 void test_algorithm(std::unique_ptr<crp::CRPAlgorithm> algorithm)
 {
-    crp::Graph g = generate_random_undirected_graph(100, 300, 100);
+    // First, generate a graph with edges only equal to 1.
+    // After that, change the weights for the customization phase
+    crp::Graph g = generate_random_undirected_graph(100, 300, 1);
+    algorithm->prepare(&g);
+
+    std::mt19937 mt(0);
+    // Random integer in [l, r]
+    const auto& rnd_integer = [&] (int l, int r) {
+        return std::uniform_int_distribution<int>(l,r)(mt);
+    };
+    for (auto& x : g.weights) {
+        x = rnd_integer(1, 100);
+    }
+
+    algorithm->customize();
 
     Dijkstra plain_dijkstra(g.num_nodes());
     const auto& shortest_path_dijkstra = [&] (NodeId a, NodeId b) {
@@ -23,10 +37,6 @@ void test_algorithm(std::unique_ptr<crp::CRPAlgorithm> algorithm)
 
         return plain_dijkstra.tentative_distance(b);
     };
-
-
-    algorithm->prepare(&g);
-    algorithm->customize();
 
     for (int a = 0; a < g.num_nodes(); a++) {
         for (int b = 0; b < g.num_nodes(); b++) {
@@ -41,13 +51,12 @@ class BidirDijkstraAlgo : public crp::CRPAlgorithm
     void prepare(crp::Graph *graph)
     {
         this->g = graph;
-        this->reversed = graph->reversed();
         bi_dijkstra = std::make_unique<BidirectionalDijstkra>(graph->num_nodes());
     }
 
     void customize()
     {
-        // Nothing to do here for dijkstra
+        this->reversed = g->reversed();
     }
 
     Distance query(NodeId start, NodeId end)
