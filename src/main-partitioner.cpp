@@ -14,22 +14,12 @@ int main() {
         gr[i + 1].push_back({i,1});
     }
 
-    crp::Graph g(gr);
-
-    std::vector<Distance> tmp_lat;
     partitioner::BfsPartitioner bfs;
-    partitioner::RecPartitioner recPart(&bfs, &g);
+    partitioner::RecPartitioner recPart(&bfs);
 
-    std::vector<NodeId> masks = recPart.partition_rec(4,2);
+    std::vector<NodeId>* masks = recPart.partition_rec(3,2, &gr);
 
-    for (unsigned i = 0; i < masks.size(); i++) {
-        std::cout << "Node " << i << ": " <<  std::bitset<8>(masks[i]) << std::endl;
+    for (unsigned i = 0; i < masks->size(); i++) {
+        std::cout << "Node " << i << ": " <<  (std::bitset<8>)((*masks)[i]) << std::endl;
     }
-
-
-
-
-
-    
-
 }
