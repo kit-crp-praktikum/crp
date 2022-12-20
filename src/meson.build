@@ -8,7 +8,8 @@ project_inc_dirs = include_directories('.')
 lib_source_files = [
     'graph.cpp',
     'partitioner/bfs-partitioner.cpp',
-    'partitioner/geo-data.cpp'
+    'partitioner/geo-data.cpp',
+    'crp/crp-main.cpp',
 ]
 
 crp_lib_includes = [project_inc_dirs, lib_includes]
