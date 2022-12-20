@@ -57,7 +57,7 @@ inline crp::Graph generate_random_undirected_graph(NodeId N, int M, Distance W, 
         auto [x, y] = available_edges.back();
         available_edges.pop_back();
 
-        if (!tree_edges.count(available_edges.back())) {
+        if (!tree_edges.count({x, y})) {
             Distance w = rnd_integer(1, W);
             add_edge(x, y, w);
             ++count_edges;
