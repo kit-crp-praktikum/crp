@@ -43,9 +43,9 @@ class FloydWarshall {
                 neighbors(i, init_edge);
             }
 
-            for(NodeId i = 0; i < n; i++) {
-                for(NodeId j = 0; j < n; j++) {
-                    for(NodeId k = 0; k < n; k++) {
+            for(NodeId k = 0; k < n; k++) {
+                for(NodeId i = 0; i < n; i++) {
+                    for(NodeId j = 0; j < n; j++) {
                         Distance alternative = distance[get_index(i, k)] + distance[get_index(k, j)];
                         if(alternative < distance[get_index(i, j)]) {
                             distance[get_index(i, j)] = alternative;
