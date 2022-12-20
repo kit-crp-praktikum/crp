@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <optional>
 #include "data-types.h"
 #include "node-slice.h"
 
@@ -34,11 +35,12 @@ class Graph
 
     // Check whether the graph has a directed edge from u to v.
     // Uses linear search with the expectation that each node's degree is very small.
-    inline bool has_edge(NodeId u, NodeId v) const
+    inline std::optional<Distance> get_edge(NodeId u, NodeId v) const
     {
         auto begin = head.begin() + first_out[u];
         auto end = head.begin() + first_out[u + 1];
-        return std::find(begin, end, v) != end;
+        auto it = std::find(begin, end, v);
+        return it == end ? std::optional<Distance>{} : *it;
     }
 
     /**
