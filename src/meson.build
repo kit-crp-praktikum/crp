@@ -23,4 +23,5 @@ crp_dep = declare_dependency(link_with: crp_library,
     include_directories: crp_lib_includes)
 
 # Main executable
-crp = executable('crp', 'main.cpp', dependencies: crp_dep)
+executable('crp', 'main.cpp', dependencies: crp_dep)
+executable('crp-nora', 'main-partitioner.cpp', dependencies: crp_dep)

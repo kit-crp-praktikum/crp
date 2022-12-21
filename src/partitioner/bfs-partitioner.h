@@ -1,9 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <unordered_set>
 #include "src/data-types.h"
 #include "geo-data.h"
-#include "src/graph.h"
 
 /**
  * Partition graph by running a BFS until the half of the nodes are reached.
@@ -16,15 +16,21 @@ class BfsPartitioner {
     BfsPartitioner();
 
     /**
-     * Returns partition as bool vector of length n
+     * Returns two partitions as pair of node sets
      * Starts BFS from highest latitude point if info available
     */
-    std::vector<bool> partition (crp::Graph* g, std::vector<bool>* cont_nodes);
+    std::pair<std::unordered_set<NodeId>*, std::unordered_set<NodeId>*> partition (std::vector<std::vector<std::pair<NodeId, Distance>>>* g);
 
-    NodeId findStart(std::vector<bool>* visited, std::vector<bool>* cont_nodes);
-
-    public:
+    private:
+    /**
+     * Find new start node if component finished
+    */
+    NodeId findStart(std::vector<bool>* visited);
+    
+    private:
     GeoData gd;
+    NodeId lastStart = 0;
+    std::unordered_set<NodeId> result0, result1;
 
 };
 }
