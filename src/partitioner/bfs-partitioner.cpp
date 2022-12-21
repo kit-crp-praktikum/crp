@@ -1,16 +1,18 @@
 #pragma once
 
-#include <vector>
-#include <queue>
-#include <algorithm>
-#include <unordered_set>
-#include "src/data-types.h"
 #include "bfs-partitioner.h"
+#include "src/data-types.h"
+#include <algorithm>
+#include <queue>
+#include <unordered_set>
+#include <vector>
 
-partitioner::BfsPartitioner::BfsPartitioner(){}
+partitioner::BfsPartitioner::BfsPartitioner()
+{
+}
 
-std::pair<std::unordered_set<NodeId>*, std::unordered_set<NodeId>*> partitioner::BfsPartitioner::partition(
-    std::vector<std::vector<std::pair<NodeId, Distance>>>* g)
+std::pair<std::unordered_set<NodeId> *, std::unordered_set<NodeId> *> partitioner::BfsPartitioner::partition(
+    std::vector<std::vector<std::pair<NodeId, Distance>>> *g)
 {
     int cnt_visited = 1;
     int num_nodes = g->size();
@@ -19,26 +21,30 @@ std::pair<std::unordered_set<NodeId>*, std::unordered_set<NodeId>*> partitioner:
 
     result0.clear();
     result1.clear();
-    
+
     NodeId start = findStart(&visited);
     visited[start] = true;
     q.push(start);
 
-    while (cnt_visited < num_nodes/2)
+    while (cnt_visited < num_nodes / 2)
     {
         NodeId s = q.front();
         q.pop();
-        
-        for (auto [to, w] : (*g)[s]) { // edge s -> to with wieght w
-            if (! visited[to]) {
+
+        for (auto [to, w] : (*g)[s])
+        { // edge s -> to with wieght w
+            if (!visited[to])
+            {
                 visited[to] = true;
                 q.push(to);
                 cnt_visited++;
-                if (cnt_visited >= num_nodes/2) break;
+                if (cnt_visited >= num_nodes / 2)
+                    break;
             }
         }
 
-        if (cnt_visited < num_nodes/2 && q.empty()) {
+        if (cnt_visited < num_nodes / 2 && q.empty())
+        {
             // all component nodes visited, find another start node
             start = findStart(&visited);
             q.push(start);
@@ -53,22 +59,27 @@ std::pair<std::unordered_set<NodeId>*, std::unordered_set<NodeId>*> partitioner:
     return {&result0, &result1};
 }
 
-NodeId partitioner::BfsPartitioner::findStart(std::vector<bool>* visited)
+NodeId partitioner::BfsPartitioner::findStart(std::vector<bool> *visited)
 {
-    if (gd.latitude.empty()) {
+    if (gd.latitude.empty())
+    {
         // find first unvisited
-        while ((*visited)[lastStart]) {
+        while ((*visited)[lastStart])
+        {
             lastStart++;
         }
         return lastStart;
     }
-    else {
+    else
+    {
         // find highest latitude
-        while ((*visited)[lastStart]) lastStart++;
+        while ((*visited)[lastStart])
+            lastStart++;
 
         int max_lat = gd.latitude[lastStart];
-        for (unsigned i = lastStart+1; i < gd.latitude.size(); i++) {
-            if (!(*visited)[i] && gd.latitude[i] > max_lat) 
+        for (unsigned i = lastStart + 1; i < gd.latitude.size(); i++)
+        {
+            if (!(*visited)[i] && gd.latitude[i] > max_lat)
             {
                 max_lat = gd.latitude[i];
                 lastStart = i;
@@ -77,4 +88,3 @@ NodeId partitioner::BfsPartitioner::findStart(std::vector<bool>* visited)
         return lastStart;
     }
 }
-

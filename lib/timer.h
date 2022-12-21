@@ -1,17 +1,18 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include <sys/time.h>
 #include <cstdint>
-#include <string>
 #include <iostream>
+#include <string>
+#include <sys/time.h>
 
 #define MICRO_SECS_PER_SEC 1'000'000ll
 
-inline uint64_t get_micro_time(){
-	timeval t;
-	gettimeofday(&t, 0);
-	return t.tv_sec * MICRO_SECS_PER_SEC + t.tv_usec;
+inline uint64_t get_micro_time()
+{
+    timeval t;
+    gettimeofday(&t, 0);
+    return t.tv_sec * MICRO_SECS_PER_SEC + t.tv_usec;
 }
 
 void measure_time(std::string name, auto F)

@@ -3,10 +3,10 @@
 #include "data-types.h"
 #include "graph.h"
 #include <algorithm>
+#include <doctest/doctest.h>
 #include <iterator>
 #include <random>
 #include <set>
-#include <doctest/doctest.h>
 
 /**
  * Generates a random connected undirected graph with N nodes and M edges.
@@ -20,28 +20,28 @@ inline crp::Graph generate_random_undirected_graph(NodeId N, int M, Distance W, 
     std::mt19937 mt(seed);
 
     // Random integer in [l, r]
-    const auto& rnd_integer = [&] (int l, int r) {
-        return std::uniform_int_distribution<int>(l,r)(mt);
-    };
+    const auto &rnd_integer = [&](int l, int r) { return std::uniform_int_distribution<int>(l, r)(mt); };
 
     std::vector<std::vector<std::pair<NodeId, Distance>>> adjlist(N);
-    const auto& add_edge = [&] (NodeId from, NodeId to, Distance weight) {
+    const auto &add_edge = [&](NodeId from, NodeId to, Distance weight) {
         adjlist[from].push_back({to, weight});
         adjlist[to].push_back({from, weight});
     };
 
     // A list of the edges of the full graph, we pick a subset of them.
     std::vector<std::pair<NodeId, NodeId>> available_edges;
-    for (NodeId x = 0; x < N; x++) {
-        for (NodeId y = x + 1; y < N; y++) {
+    for (NodeId x = 0; x < N; x++)
+    {
+        for (NodeId y = x + 1; y < N; y++)
+        {
             available_edges.push_back({x, y});
         }
     }
 
-
     // Step 1: to guarantee correctness, generate a tree with N vertices.
     std::set<std::pair<NodeId, NodeId>> tree_edges;
-    for (NodeId x = 1; x < N; x++) {
+    for (NodeId x = 1; x < N; x++)
+    {
         // Each node should get a parent
 
         NodeId p = rnd_integer(0, x - 1);
@@ -53,11 +53,13 @@ inline crp::Graph generate_random_undirected_graph(NodeId N, int M, Distance W, 
     // Step 2: fill up the remaining edges
     std::shuffle(available_edges.begin(), available_edges.end(), mt);
     int count_edges = N - 1;
-    while (count_edges < M) {
+    while (count_edges < M)
+    {
         auto [x, y] = available_edges.back();
         available_edges.pop_back();
 
-        if (!tree_edges.count({x, y})) {
+        if (!tree_edges.count({x, y}))
+        {
             Distance w = rnd_integer(1, W);
             add_edge(x, y, w);
             ++count_edges;
@@ -70,8 +72,10 @@ inline crp::Graph generate_random_undirected_graph(NodeId N, int M, Distance W, 
     std::shuffle(labels.begin(), labels.end(), mt);
 
     std::vector<std::vector<std::pair<NodeId, Distance>>> adjlist2(N);
-    for (NodeId x = 0; x < N; x++) {
-        for (auto [y, w] : adjlist[x]) {
+    for (NodeId x = 0; x < N; x++)
+    {
+        for (auto [y, w] : adjlist[x])
+        {
             adjlist2[labels[x]].push_back({labels[y], w});
         }
     }

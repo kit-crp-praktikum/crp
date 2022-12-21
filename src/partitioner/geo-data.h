@@ -1,14 +1,14 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include "src/data-types.h"
+#include <string>
+#include <vector>
 
 namespace partitioner
 {
 class GeoData
 {
-    public:
+  public:
     GeoData();
 
     // Load a lat/lon from files in the format of the praktikum.
@@ -17,8 +17,8 @@ class GeoData
     // Load a lat/lon from a vector, useful for simpler tests.
     GeoData(std::vector<int> latitude, std::vector<int> longitude);
 
-    public:
+  public:
     std::vector<int> latitude;
     std::vector<int> longitude;
 };
-}
+} // namespace partitioner

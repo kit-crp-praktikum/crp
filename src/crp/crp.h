@@ -42,15 +42,16 @@ struct RecursivePartition
 };
 
 // A function which can compute a partition from (graph, number_of_levels, cells_per_level).
-using RecursivePartitionerFunction = std::function<RecursivePartition(crp::Graph*, int, int)>;
+using RecursivePartitionerFunction = std::function<RecursivePartition(crp::Graph *, int, int)>;
 
 using LevelId = int;
 using CellId = int;
 
-struct OverlayStructure {
+struct OverlayStructure
+{
     // Create an overlay structure using the given graph and a list of bitmasks for each node, indicating
     // which cell each node is placed on each level.
-    OverlayStructure(crp::Graph* g, RecursivePartition partition);
+    OverlayStructure(crp::Graph *g, RecursivePartition partition);
 
     CellId get_cell_for_node(NodeId u, LevelId level);
 
@@ -59,7 +60,7 @@ struct OverlayStructure {
 
     // Get a reference to the memory where the distance between border nodes a and b is stored.
     // Note that a and b are internal IDs for the given cell.
-    Distance* get_distance(LevelId level, CellId cell, NodeId a, NodeId b);
+    Distance *get_distance(LevelId level, CellId cell, NodeId a, NodeId b);
 
     // Get the number of cells on a given level.
     // The cells are numbered from 0 to num_cells_in_level-1.
@@ -90,7 +91,7 @@ struct OverlayStructure {
 };
 
 // A function which runs the customization on the given graph
-using CustomizationFunction = std::function<void(crp::Graph*, OverlayStructure*)>;
+using CustomizationFunction = std::function<void(crp::Graph *, OverlayStructure *)>;
 
 /**
  * The actual implementation of the CRP Algorithm.
@@ -101,7 +102,7 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     void prepare(Graph *graph) override;
     void customize() override;
     Distance query(NodeId start, NodeId end) override;
-    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance& out_dist) override;
+    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist) override;
 
   public:
     CRPAlgorithm(RecursivePartitionerFunction partition);
@@ -110,4 +111,4 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     crp::Graph *g;
     std::unique_ptr<OverlayStructure> overlay;
 };
-}
+} // namespace crp

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>
 #include "data-types.h"
 #include "graph.h"
+#include <memory>
 
 namespace crp
 {
@@ -32,7 +32,7 @@ class CRPAlgorithmInterface
     /**
      * Query: Find the shortest path between start and end.
      */
-    virtual std::vector<NodeId> query_path(NodeId start, NodeId end, Distance& out_dist) = 0;
+    virtual std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist) = 0;
 };
 
-};
+}; // namespace crp

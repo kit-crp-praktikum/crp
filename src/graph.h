@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <algorithm>
-#include <optional>
 #include "data-types.h"
 #include "node-slice.h"
+#include <algorithm>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace crp
 {
@@ -15,15 +15,17 @@ class Graph
 {
   public:
     // Empty graph
-    Graph() {}
+    Graph()
+    {
+    }
 
     // Load a graph from a set of files in the format of the praktikum.
     Graph(std::string first_out, std::string head, std::string weights);
 
     // Load a graph from an adjacency list, useful for simpler tests.
-    Graph(const AdjacencyList& adj_list);
+    Graph(const AdjacencyList &adj_list);
 
-    detail::NodeSlice<Graph> operator[] (size_t idx) const
+    detail::NodeSlice<Graph> operator[](size_t idx) const
     {
         return detail::NodeSlice(this, idx);
     }
@@ -53,4 +55,4 @@ class Graph
     std::vector<NodeId> head;
     std::vector<Distance> weights;
 };
-}
+} // namespace crp

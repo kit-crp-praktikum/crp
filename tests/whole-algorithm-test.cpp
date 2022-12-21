@@ -1,14 +1,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
-#include "algorithms/dijkstra.hpp"
 #include "algorithms/bellman_ford.hpp"
+#include "algorithms/dijkstra.hpp"
 #include "algorithms/floyd_warshall.hpp"
 #include "data-types.h"
-#include <memory>
+#include "graph-generator.hpp"
 #include "graph.h"
 #include "shortest-path-algorithm.h"
-#include "graph-generator.hpp"
+#include <memory>
 
 void test_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm)
 {
@@ -19,20 +19,20 @@ void test_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm)
 
     std::mt19937 mt(0);
     // Random integer in [l, r]
-    const auto& rnd_integer = [&] (int l, int r) {
-        return std::uniform_int_distribution<int>(l,r)(mt);
-    };
-    for (auto& x : g.weights) {
+    const auto &rnd_integer = [&](int l, int r) { return std::uniform_int_distribution<int>(l, r)(mt); };
+    for (auto &x : g.weights)
+    {
         x = rnd_integer(1, 100);
     }
 
     algorithm->customize();
 
     Dijkstra plain_dijkstra(g.num_nodes());
-    const auto& shortest_path_dijkstra = [&] (NodeId a, NodeId b) {
+    const auto &shortest_path_dijkstra = [&](NodeId a, NodeId b) {
         plain_dijkstra.reset();
-        plain_dijkstra.compute_distance_target(a, b, [&] (NodeId u, auto ForEachNeighbor) {
-            for (auto [v, weight] : g[u]) {
+        plain_dijkstra.compute_distance_target(a, b, [&](NodeId u, auto ForEachNeighbor) {
+            for (auto [v, weight] : g[u])
+            {
                 ForEachNeighbor(v, weight);
             }
         });
@@ -40,8 +40,10 @@ void test_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm)
         return plain_dijkstra.tentative_distance(b);
     };
 
-    for (int a = 0; a < g.num_nodes(); a++) {
-        for (int b = 0; b < g.num_nodes(); b++) {
+    for (int a = 0; a < g.num_nodes(); a++)
+    {
+        for (int b = 0; b < g.num_nodes(); b++)
+        {
             CHECK(algorithm->query(a, b) == shortest_path_dijkstra(a, b));
         }
     }
@@ -63,14 +65,17 @@ class BidirDijkstraAlgo : public crp::CRPAlgorithmInterface
 
     Distance query(NodeId start, NodeId end)
     {
-        auto r = bi_dijkstra->compute_distance_target(start, end,
-            [&] (NodeId u, auto ForEach) {
-                for (auto [v, weight] : (*g)[u]) {
+        auto r = bi_dijkstra->compute_distance_target(
+            start, end,
+            [&](NodeId u, auto ForEach) {
+                for (auto [v, weight] : (*g)[u])
+                {
                     ForEach(v, weight);
                 }
             },
-            [&] (NodeId u, auto ForEach) {
-                for (auto [v, weight] : reversed[u]) {
+            [&](NodeId u, auto ForEach) {
+                for (auto [v, weight] : reversed[u])
+                {
                     ForEach(v, weight);
                 }
             });
@@ -78,7 +83,7 @@ class BidirDijkstraAlgo : public crp::CRPAlgorithmInterface
         return r.second;
     }
 
-    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance& out_dist)
+    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist)
     {
         // Not implemented yet
         return {};
@@ -111,9 +116,9 @@ class BellmanFordAlgo : public crp::CRPAlgorithmInterface
 
         for (int s = 0; s < g->num_nodes(); s++)
         {
-            bf->compute_distance(s, [=] (NodeId u, auto F)
-            {
-                for (auto [v, weight] : (*g)[u]) {
+            bf->compute_distance(s, [=](NodeId u, auto F) {
+                for (auto [v, weight] : (*g)[u])
+                {
                     F(v, weight);
                 }
             });
@@ -130,7 +135,7 @@ class BellmanFordAlgo : public crp::CRPAlgorithmInterface
         return distance_matrix[start][end];
     }
 
-    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance& out_dist)
+    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist)
     {
         // Not implemented yet
         return {};
@@ -158,9 +163,9 @@ class FloydWarshallAlgo : public crp::CRPAlgorithmInterface
 
     void customize()
     {
-        fs->compute_all_distances([=] (NodeId u, auto F)
-        {
-            for (auto [v, weight] : (*g)[u]) {
+        fs->compute_all_distances([=](NodeId u, auto F) {
+            for (auto [v, weight] : (*g)[u])
+            {
                 F(v, weight);
             }
         });
@@ -171,7 +176,7 @@ class FloydWarshallAlgo : public crp::CRPAlgorithmInterface
         return fs->get_distance(start, end);
     }
 
-    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance& out_dist)
+    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist)
     {
         // Not implemented yet
         return {};
