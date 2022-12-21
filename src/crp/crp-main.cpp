@@ -59,7 +59,7 @@ OverlayStructure::OverlayStructure(crp::Graph* g, RecursivePartition _partition)
 
 CellId OverlayStructure::get_cell_for_node(NodeId u, LevelId level)
 {
-    return node_id_on_level[level][u];
+    return partition.find_cell_for_node(u, level);
 }
 
 std::span<NodeId> OverlayStructure::get_border_nodes_for_cell(
