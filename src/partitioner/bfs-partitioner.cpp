@@ -4,23 +4,22 @@
 #include "src/data-types.h"
 #include <algorithm>
 #include <queue>
-#include <unordered_set>
 #include <vector>
 
 partitioner::BfsPartitioner::BfsPartitioner()
 {
 }
 
-std::pair<std::unordered_set<NodeId> *, std::unordered_set<NodeId> *> partitioner::BfsPartitioner::partition(
+std::vector<bool>* partitioner::BfsPartitioner::partition(
     std::vector<std::vector<std::pair<NodeId, Distance>>> *g)
 {
     int cnt_visited = 1;
     int num_nodes = g->size();
     std::queue<NodeId> q;
-    std::vector<bool> visited(g->size(), false);
 
-    result0.clear();
-    result1.clear();
+    visited.clear();
+    visited.resize(g->size());
+    lastStart = 0;
 
     NodeId start = findStart(&visited);
     visited[start] = true;
@@ -53,10 +52,7 @@ std::pair<std::unordered_set<NodeId> *, std::unordered_set<NodeId> *> partitione
         }
     }
 
-    for (unsigned i = 0; i < visited.size(); i++)
-        visited[i] ? result1.insert(i) : result0.insert(i);
-
-    return {&result0, &result1};
+    return &visited;
 }
 
 NodeId partitioner::BfsPartitioner::findStart(std::vector<bool> *visited)
