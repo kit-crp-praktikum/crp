@@ -36,7 +36,8 @@ struct RecursivePartition
 
     inline int find_cell_for_node(NodeId u, int level)
     {
-        uint32_t bits = (number_of_levels - level) * cells_per_level;
+        const uint32_t bits_per_level = 32 - __builtin_clz(cells_per_level - 1);
+        uint32_t bits = (number_of_levels - level) * bits_per_level;
         return mask[u] & ((1 << bits) - 1);
     }
 };
@@ -55,7 +56,7 @@ struct OverlayStructure
 
     CellId get_cell_for_node(NodeId u, LevelId level);
 
-    // Get the internal ID of the node inside its cell on the given level.
+    // Get the internal ID of the given border node inside its cell on the given level.
     NodeId get_internal_id(NodeId u, LevelId level);
 
     // Get a reference to the memory where the distance between border nodes a and b is stored.
@@ -84,7 +85,7 @@ struct OverlayStructure
     // border_nodes[level][cell] contains a list of the border nodes of the given cell (on the given level).
     //
     // Cells on each level are numbered from 0 to the number of cells on that level.
-    // Levels are numbered 0..(number_of_levels), where level 0 contains isolated nodes only.
+    // Levels are numbered 0..(number_of_levels-1), where level -1 contains isolated nodes only.
     std::vector<std::vector<std::vector<NodeId>>> border_nodes;
 
     RecursivePartition partition;

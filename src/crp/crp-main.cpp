@@ -16,7 +16,7 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
     this->border_nodes.resize(partition.number_of_levels);
 
     int num_cells_in_level = 1;
-    for (LevelId level = 0; level < partition.number_of_levels; level++)
+    for (LevelId level = partition.number_of_levels - 1; level >= 0; level--)
     {
         num_cells_in_level *= partition.cells_per_level;
 
@@ -28,7 +28,7 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
             {
                 const auto cellU = partition.find_cell_for_node(u, level);
                 node_id_on_level[level][u] = border_nodes[level][cellU].size();
-                border_nodes[level][cellU].push_back(cellU);
+                border_nodes[level][cellU].push_back(u);
             }
         };
 
