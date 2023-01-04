@@ -10,6 +10,9 @@ lib_source_files = [
     'partitioner/bfs-partitioner.cpp',
     'partitioner/geo-data.cpp',
     'crp/crp-main.cpp',
+    'crp/crp-prepare.cpp',
+    'crp/crp-query.cpp',
+    'crp/crp-customization.cpp',
 ]
 
 crp_lib_includes = [project_inc_dirs, lib_includes]

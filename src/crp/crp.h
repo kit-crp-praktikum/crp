@@ -1,5 +1,6 @@
 #pragma once
 
+#include "algorithms/dijkstra.hpp"
 #include "data-types.h"
 #include "graph.h"
 #include "shortest-path-algorithm.h"
@@ -94,6 +95,14 @@ struct OverlayStructure
 // A function which runs the customization on the given graph
 using CustomizationFunction = std::function<void(crp::Graph *, OverlayStructure *)>;
 
+struct CRPAlgorithmParams
+{
+    int number_of_levels;
+    int cells_per_level;
+    RecursivePartitionerFunction partitioner;
+    CustomizationFunction customizer;
+};
+
 /**
  * The actual implementation of the CRP Algorithm.
  */
@@ -106,10 +115,15 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist) override;
 
   public:
-    CRPAlgorithm(RecursivePartitionerFunction partition);
+    CRPAlgorithm(CRPAlgorithmParams params);
 
   private:
+    CRPAlgorithmParams params;
+
     crp::Graph *g;
+    crp::Graph reverse;
+    RecursivePartition partition;
     std::unique_ptr<OverlayStructure> overlay;
+    std::unique_ptr<BidirectionalDijstkra> bidir_dijkstra;
 };
 } // namespace crp

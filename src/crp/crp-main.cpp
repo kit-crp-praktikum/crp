@@ -80,4 +80,9 @@ NodeId OverlayStructure::get_internal_id(NodeId u, LevelId level)
     return node_id_on_level[level][u];
 }
 
+CRPAlgorithm::CRPAlgorithm(CRPAlgorithmParams params)
+{
+    this->params = params;
+}
+
 } // namespace crp
