@@ -4,7 +4,7 @@
 
 namespace crp
 {
-Distance CRPAlgorithm::query(NodeId start, NodeId end)
+std::pair<NodeId, Distance> CRPAlgorithm::_query(NodeId start, NodeId end)
 {
     const auto &search_fwd = [&](NodeId u, auto relaxOp) {
         const int level = std::min(partition.find_level_differing(start, u), partition.find_level_differing(end, u));
@@ -56,6 +56,19 @@ Distance CRPAlgorithm::query(NodeId start, NodeId end)
         }
     };
 
-    return bidir_dijkstra->compute_distance_target(start, end, search_fwd, search_bwd).second;
+    return bidir_dijkstra->compute_distance_target(start, end, search_fwd, search_bwd);
+}
+
+Distance CRPAlgorithm::query(NodeId start, NodeId end)
+{
+    return _query(start, end).second;
+}
+
+std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance &out_dist)
+{
+    auto [middle, distance] = _query(start, end);
+    out_dist = distance;
+
+    // TODO: implement path unpacking from bidir_dijkstra.
 }
 } // namespace crp
