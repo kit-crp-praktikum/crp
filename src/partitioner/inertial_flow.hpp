@@ -3,6 +3,7 @@
 #include "algorithms/dinics.hpp"
 #include "data-types.h"
 #include "partitioner/geo-data.h"
+#include "graph.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -22,7 +23,7 @@ class InertialFlowPartitioner
 
     using Longitude = uint32_t;
     using Latitude = uint32_t;
-    using Graph = std::vector<std::vector<std::pair<NodeId, Distance>>>;
+    // using Graph = std::vector<std::vector<std::pair<NodeId, Distance>>>;
 
   public:
     /**
@@ -37,7 +38,7 @@ class InertialFlowPartitioner
     {
     }
 
-    std::vector<bool> partition(Graph &graph, partitioner::GeoData &geo_data)
+    std::vector<bool> partition(crp::AdjacencyList &graph, partitioner::GeoData &geo_data)
     {
         uint32_t n = graph.size();
         assert(n == geo_data.latitude.size());
@@ -63,7 +64,7 @@ class InertialFlowPartitioner
     }
 
   private:
-    std::vector<bool> minimize_edge_cut(Graph &graph, partitioner::GeoData &geo_data)
+    std::vector<bool> minimize_edge_cut(crp::AdjacencyList &graph, partitioner::GeoData &geo_data)
     {
         std::vector<NodeId> left_nodes, right_nodes;
         std::vector<bool> best_partition, partition;
