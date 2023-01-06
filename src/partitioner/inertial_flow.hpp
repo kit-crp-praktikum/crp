@@ -20,11 +20,8 @@ namespace partitioner
 {
 class InertialFlowPartitioner
 {
-
     using Longitude = uint32_t;
     using Latitude = uint32_t;
-    // using Graph = std::vector<std::vector<std::pair<NodeId, Distance>>>;
-
   public:
     /**
      * @param max_num_nodes maximum number of nodes which will be used during partitioning

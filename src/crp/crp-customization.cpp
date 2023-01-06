@@ -1,13 +1,14 @@
 #include "algorithms/dijkstra.hpp"
 #include "crp.h"
 
+#include <iostream>
+
 namespace crp
 {
 void CRPAlgorithm::customize()
 {
     this->reverse = g->reversed();
     this->params.customizer(g, overlay.get());
-
     Dijkstra one_to_all(g->num_nodes());
 
     // compute level i cliques from original graph
@@ -61,6 +62,11 @@ void CRPAlgorithm::customize()
                 const CellId lower_cellId = overlay->get_cell_for_node(u, prev_level);
                 const NodeId internal_u = overlay->get_internal_id(u, prev_level);
                 const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(prev_level, lower_cellId);
+                // invalid ID -> is no border node
+                if (internal_u == g->num_nodes())
+                {
+                    return;
+                }
                 for (NodeId internal_to = 0; internal_to < neighbors.size(); internal_to++)
                 {
                     f(neighbors[internal_to],
