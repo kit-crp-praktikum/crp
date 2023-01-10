@@ -127,6 +127,19 @@ class Dijkstra
         return parent[v];
     }
 
+    std::vector<NodeId> unpack (NodeId s, NodeId t) {
+        NodeId node = t;
+        std::vector<NodeId> path;
+        while (node != s)
+        {
+            path.push_back(node);
+            node = get_parent(node);
+        }
+        path.push_back(node);
+        std::reverse(path.begin(), path.end());
+        return path;
+    }
+
   private:
     TimestampedVector<bool> visited;
     TimestampedVector<Distance> distance;
@@ -142,7 +155,7 @@ class BidirectionalDijstkra
     {
     }
 
-    // returns last settled node and distance between start and target
+    // returns meeting point and distance between start and target
     template <bool update_parents = false>
     std::pair<NodeId, Distance> compute_distance_target(NodeId start, NodeId target, auto fwd_neighbors,
                                                         auto bwd_neighbors)
@@ -152,6 +165,7 @@ class BidirectionalDijstkra
         fwd.init_start_node(start);
         bwd.init_start_node(target);
         NodeId settled = number_of_nodes + 2;
+        NodeId meeting_point = target;
         Distance tentative_distance = INF;
         std::size_t steps = 0;
 
@@ -168,11 +182,13 @@ class BidirectionalDijstkra
                 settled = bwd.step<update_parents>(bwd_neighbors);
             }
             // no overlow, since INF = MAX_INT / 2
-            tentative_distance =
-                std::min(tentative_distance, fwd.tentative_distance(settled) + bwd.tentative_distance(settled));
+            if (tentative_distance > fwd.tentative_distance(settled) + bwd.tentative_distance(settled)) {
+                tentative_distance = fwd.tentative_distance(settled) + bwd.tentative_distance(settled);
+                meeting_point = settled;
+            }
             steps++;
         }
-        return {settled, tentative_distance};
+        return {meeting_point, tentative_distance};
     }
 
     NodeId fwd_parent(NodeId v)
@@ -183,6 +199,27 @@ class BidirectionalDijstkra
     NodeId bwd_parent(NodeId v)
     {
         return bwd.get_parent(v);
+    }
+
+    std::vector<NodeId> unpack (NodeId s, NodeId t, NodeId meeting_point) {
+        std::vector<NodeId> path;
+        NodeId node = meeting_point;
+        while (node != s)
+        {
+            path.push_back(node);
+            node = fwd_parent(node);
+        }
+        path.push_back(node);
+        std::reverse(path.begin(), path.end());
+        // now fwd path added: s..meeting_point
+        // meeting_point..t is still to be added
+        node = meeting_point;
+        while (node != t)
+        {
+            node = bwd_parent(node);
+            path.push_back(node);
+        }
+        return path;
     }
 
   private:
