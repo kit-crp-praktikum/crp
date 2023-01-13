@@ -10,8 +10,7 @@ partitioner::BfsPartitioner::BfsPartitioner()
 {
 }
 
-std::vector<bool>* partitioner::BfsPartitioner::partition(
-    std::vector<std::vector<std::pair<NodeId, Distance>>> *g)
+std::vector<bool> *partitioner::BfsPartitioner::partition(std::vector<std::vector<std::pair<NodeId, Distance>>> *g)
 {
     int cnt_visited = 1;
     int num_nodes = g->size();
@@ -72,7 +71,7 @@ NodeId partitioner::BfsPartitioner::findStart(std::vector<bool> *visited)
         while ((*visited)[lastStart])
             lastStart++;
 
-        int max_lat = gd.latitude[lastStart];
+        float max_lat = gd.latitude[lastStart];
         for (unsigned i = lastStart + 1; i < gd.latitude.size(); i++)
         {
             if (!(*visited)[i] && gd.latitude[i] > max_lat)

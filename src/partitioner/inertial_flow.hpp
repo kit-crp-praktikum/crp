@@ -2,8 +2,8 @@
 
 #include "algorithms/dinics.hpp"
 #include "data-types.h"
-#include "partitioner/geo-data.h"
 #include "graph.h"
+#include "partitioner/geo-data.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -22,6 +22,7 @@ class InertialFlowPartitioner
 {
     using Longitude = uint32_t;
     using Latitude = uint32_t;
+
   public:
     /**
      * @param max_num_nodes maximum number of nodes which will be used during partitioning
@@ -108,8 +109,8 @@ class InertialFlowPartitioner
     void compute_center(partitioner::GeoData &geo_data)
     {
         double n = geo_data.latitude.size();
-        double center_x = std::reduce(geo_data.latitude.begin(), geo_data.latitude.end(), 0, std::plus<double>());
-        double center_y = std::reduce(geo_data.longitude.begin(), geo_data.longitude.end(), 0, std::plus<double>());
+        double center_x = std::reduce(geo_data.latitude.begin(), geo_data.latitude.end(), 0.0f, std::plus<float>());
+        double center_y = std::reduce(geo_data.longitude.begin(), geo_data.longitude.end(), 0.0f, std::plus<float>());
         center_of_nodes = {center_x / n, center_y / n};
     }
 

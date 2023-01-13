@@ -139,8 +139,8 @@ void test_inertial_flow()
     double group_size = 0.1;
     using Node = std::pair<NodeId, Distance>;
     std::vector<std::vector<Node>> graph(n * n);
-    std::vector<int> x(n * n);
-    std::vector<int> y(n * n);
+    std::vector<float> x(n * n);
+    std::vector<float> y(n * n);
     auto add_edge = [&](NodeId v, NodeId w) {
         if (v < w)
         { // only in one direction

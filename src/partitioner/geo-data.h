@@ -15,10 +15,10 @@ class GeoData
     GeoData(std::string latitude, std::string longitude);
 
     // Load a lat/lon from a vector, useful for simpler tests.
-    GeoData(std::vector<int> latitude, std::vector<int> longitude);
+    GeoData(std::vector<float> latitude, std::vector<float> longitude);
 
   public:
-    std::vector<int> latitude;
-    std::vector<int> longitude;
+    std::vector<float> latitude;
+    std::vector<float> longitude;
 };
 } // namespace partitioner
