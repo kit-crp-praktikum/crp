@@ -2,7 +2,7 @@
 
 #include "geo-data.h"
 #include "src/data-types.h"
-#include <unordered_set>
+
 #include <vector>
 
 /**
@@ -17,10 +17,10 @@ class BfsPartitioner
     BfsPartitioner();
 
     /**
-     * Returns two partitions as pair of node sets
+     * Returns two partitions as bool vector
      * Starts BFS from highest latitude point if info available
      */
-    std::pair<std::unordered_set<NodeId> *, std::unordered_set<NodeId> *> partition(
+    std::vector<bool>* partition(
         std::vector<std::vector<std::pair<NodeId, Distance>>> *g);
 
   private:
@@ -32,6 +32,6 @@ class BfsPartitioner
   private:
     GeoData gd;
     NodeId lastStart = 0;
-    std::unordered_set<NodeId> result0, result1;
+    std::vector<bool> visited;
 };
 } // namespace partitioner

@@ -23,6 +23,6 @@ int main()
 
     for (unsigned i = 0; i < masks->size(); i++)
     {
-        std::cout << "Node " << i << ": " << (std::bitset<8>)((*masks)[i]) << std::endl;
+        std::cout << "Node " << i << ": " << (std::bitset<9>)((*masks)[i]) << std::endl;
     }
 }
