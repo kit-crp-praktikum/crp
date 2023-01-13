@@ -6,73 +6,20 @@
 #include <numeric>
 
 #include "crp/crp.h"
-
-#define encode(i, j) (n * (i) + j)
-
-// Generate an n x n grid graph with all equal weights
-crp::AdjacencyList generate_grid_graph(int n)
-{
-    int nr_cells = n * n;
-    crp::AdjacencyList adj_list(nr_cells);
-
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            int cur = encode(i, j);
-            if (i > 0)
-                adj_list[cur].emplace_back(encode(i - 1, j), 1);
-            if (j > 0)
-                adj_list[cur].emplace_back(encode(i, j - 1), 1);
-            if (i < n - 1)
-                adj_list[cur].emplace_back(encode(i + 1, j), 1);
-            if (j < n - 1)
-                adj_list[cur].emplace_back(encode(i, j + 1), 1);
-        }
-    }
-
-    return adj_list;
-}
+#include "grid-graph.hpp"
 
 TEST_CASE("Grid graph n=8")
 {
     const int n = 8;
     crp::Graph g{generate_grid_graph(n)};
 
+    dump_grid_graph_node_ids(n);
+
     // Generate simple 2-level partition
     crp::RecursivePartition rp;
     rp.cells_per_level = 4;
     rp.number_of_levels = 2;
-    rp.mask.resize(g.num_nodes());
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            std::cout << std::setw(2) << std::setfill(' ') << encode(i, j) << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            int cur = encode(i, j);
-
-            int mask = 0;
-            mask |= !!(i & 2);
-            mask <<= 1;
-            mask |= !!(j & 2);
-            mask <<= 1;
-
-            mask |= !!(i & 4);
-            mask <<= 1;
-            mask |= !!(j & 4);
-            rp.mask[cur] = mask;
-            std::cout << std::setw(2) << std::setfill(' ') << mask << " ";
-        }
-        std::cout << std::endl;
-    }
+    rp.mask = generate_two_level_partition_for_8x8();
 
     crp::OverlayStructure os(&g, rp);
 
