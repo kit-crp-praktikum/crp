@@ -1,8 +1,12 @@
 doctest = dependency('doctest')
 
+basic_algos = executable('basic-algorithms-test',
+    ['basic-algorithms-test.cpp'], dependencies: [crp_dep, doctest])
+test('Test that basic algorithms work correctly', basic_algos)
+
 whole_algorithm = executable('whole-algorithm-test',
     ['whole-algorithm-test.cpp'], dependencies: [crp_dep, doctest])
-test('Test that algorithms have the same output', whole_algorithm)
+test('Test that CRP works correctly', whole_algorithm)
 
 overlay_structure = executable('os-test',
     ['os-test.cpp'], dependencies: [crp_dep, doctest])

@@ -32,10 +32,13 @@ inline crp::AdjacencyList generate_grid_graph(int n)
     return adj_list;
 }
 
-inline crp::RecursivePartitionMask generate_two_level_partition_for_8x8()
+// N must be a power of two.
+inline crp::RecursivePartitionMask generate_two_level_partition(int n)
 {
-    const int n = 8;
     crp::RecursivePartitionMask result(n * n);
+    int nr_bits = __builtin_ctz(n);
+    const int level0_bit = (1 << (nr_bits - 2));
+    const int level1_bit = (1 << (nr_bits - 1));
 
     for (int i = 0; i < n; i++)
     {
@@ -44,14 +47,14 @@ inline crp::RecursivePartitionMask generate_two_level_partition_for_8x8()
             int cur = encode(i, j);
 
             int mask = 0;
-            mask |= !!(i & 2);
+            mask |= !!(i & level0_bit);
             mask <<= 1;
-            mask |= !!(j & 2);
+            mask |= !!(j & level0_bit);
             mask <<= 1;
 
-            mask |= !!(i & 4);
+            mask |= !!(i & level1_bit);
             mask <<= 1;
-            mask |= !!(j & 4);
+            mask |= !!(j & level1_bit);
             result[cur] = mask;
             std::cout << std::setw(2) << std::setfill(' ') << mask << " ";
         }

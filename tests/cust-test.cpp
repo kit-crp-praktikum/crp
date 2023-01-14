@@ -24,7 +24,7 @@ TEST_CASE("Grid graph n=8")
     rp.mask.resize(g.num_nodes());
 
     dump_grid_graph_node_ids(n);
-    rp.mask = generate_two_level_partition_for_8x8();
+    rp.mask = generate_two_level_partition(n);
 
     auto partitioner = [&](crp::Graph *g, int number_of_levels, int cells_per_level) { return rp; };
     auto customizer = [&](crp::Graph *g, crp::OverlayStructure *) {
