@@ -12,17 +12,15 @@
 #include <vector>
 
 #include "lib/debug.h"
+#include "bipartitioner.h"
 
 /**
  * Implementation of Inertial-Flow partitioner.
  */
 namespace partitioner
 {
-class InertialFlowPartitioner
+class InertialFlowPartitioner : public BiPartitioner
 {
-    using Longitude = uint32_t;
-    using Latitude = uint32_t;
-
   public:
     /**
      * @param max_num_nodes maximum number of nodes which will be used during partitioning
