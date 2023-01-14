@@ -122,7 +122,7 @@ class CRPAlgorithm : public CRPAlgorithmInterface
 
     // Query the shortest path from start to end using bidir_dijkstra.
     // The result is the node where forward and backward search met and the computed shortest distance.
-    std::pair<NodeId, Distance> _query(NodeId start, NodeId end);
+    template <bool update_parents> std::pair<NodeId, Distance> _query(NodeId start, NodeId end);
 
     crp::Graph *g;
     crp::Graph reverse;
