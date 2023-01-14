@@ -12,7 +12,10 @@ overlay_structure = executable('os-test',
     ['os-test.cpp'], dependencies: [crp_dep, doctest])
 test('Test that the overlay structure works', overlay_structure)
 
-
 customization = executable('cust-test',
     ['cust-test.cpp'], dependencies: [crp_dep, doctest])
 test('Test that the customization works', customization)
+
+path_unpack = executable('path-unpacking',
+    ['path-unpacking-test.cpp'], dependencies: [crp_dep, doctest])
+test('Test that basic path unpacking works', path_unpack)

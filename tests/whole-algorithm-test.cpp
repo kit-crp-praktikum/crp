@@ -11,10 +11,9 @@
 #define _ << " " <<
 #define debug(x) #x << " = " << x
 
-TEST_CASE("Test CRP on 8x8 grid graph")
+static crp::CRPAlgorithmParams gen_params_8x8()
 {
     const int n = 8;
-
     crp::CRPAlgorithmParams params;
     params.number_of_levels = 2;
     params.cells_per_level = 4;
@@ -31,8 +30,19 @@ TEST_CASE("Test CRP on 8x8 grid graph")
     };
 
     dump_grid_graph_node_ids(n);
+    return params;
+}
 
-    auto crp = std::make_unique<crp::CRPAlgorithm>(params);
-    auto graph = generate_grid_graph(n);
+TEST_CASE("Test CRP on 8x8 grid graph")
+{
+    auto crp = std::make_unique<crp::CRPAlgorithm>(gen_params_8x8());
+    auto graph = generate_grid_graph(8);
     test_algorithm(std::move(crp), crp::Graph{graph});
+}
+
+TEST_CASE("Test CRP path unpacking on 8x8 grid graph")
+{
+    auto crp = std::make_unique<crp::CRPAlgorithm>(gen_params_8x8());
+    auto graph = generate_grid_graph(8);
+    test_algorithm_path(std::move(crp), crp::Graph{graph});
 }
