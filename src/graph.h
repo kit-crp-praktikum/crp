@@ -42,7 +42,7 @@ class Graph
         auto begin = head.begin() + first_out[u];
         auto end = head.begin() + first_out[u + 1];
         auto it = std::find(begin, end, v);
-        return it == end ? std::optional<Distance>{} : *it;
+        return it == end ? std::optional<Distance>{} : weights[it - head.begin()];
     }
 
     /**
