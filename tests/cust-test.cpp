@@ -27,31 +27,13 @@ TEST_CASE("Grid graph n=8")
     rp.mask = generate_two_level_partition(n);
 
     auto partitioner = [&](crp::Graph *g, int number_of_levels, int cells_per_level) { return rp; };
-    auto customizer = [&](crp::Graph *g, crp::OverlayStructure *) {
-        for (uint32_t i = 0; i < g->weights.size(); i++)
-        {
-            g->weights[i] = 1;
-        }
-    };
+    auto customizer = crp::customize_with_dijkstra;
+
     crp::CRPAlgorithmParams param = {rp.number_of_levels, rp.cells_per_level, partitioner, customizer};
     crp::CRPAlgorithm crp(param);
     crp.prepare(&g);
 
-    // print mutilevel partition
-    for (int l = 0; l < param.number_of_levels; l++)
-    {
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = 0; j < n; j++)
-            {
-                crp::CellId cell = crp.overlay->get_cell_for_node(encode(i, j), l);
-                std::cout << std::setw(2) << std::setfill(' ') << cell << " ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    grid_graph_print_recursive_partition(n, rp);
 
     crp.customize();
 

@@ -80,6 +80,11 @@ NodeId OverlayStructure::get_internal_id(NodeId u, LevelId level)
     return node_id_on_level[level][u];
 }
 
+int OverlayStructure::get_number_of_levels()
+{
+    return partition.number_of_levels;
+}
+
 CRPAlgorithm::CRPAlgorithm(CRPAlgorithmParams params)
 {
     this->params = params;

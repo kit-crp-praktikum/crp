@@ -72,6 +72,9 @@ struct OverlayStructure
     // The i-th node in the list returned is the node with internal ID i.
     std::span<NodeId> get_border_nodes_for_cell(LevelId level, CellId cell);
 
+    // Returns the number of levels in the recursive partition.
+    int get_number_of_levels();
+
   private:
     using Clique = std::vector<std::vector<Distance>>;
 
@@ -130,4 +133,8 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     std::unique_ptr<OverlayStructure> overlay;
     std::unique_ptr<BidirectionalDijstkra> bidir_dijkstra;
 };
+
+// customization variants
+void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay);
+
 } // namespace crp

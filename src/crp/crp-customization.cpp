@@ -9,10 +9,13 @@ void CRPAlgorithm::customize()
 {
     this->reverse = g->reversed();
     this->params.customizer(g, overlay.get());
+}
+
+void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
+{
     Dijkstra one_to_all(g->num_nodes());
 
-    // compute level i cliques from original graph
-
+    // compute level 0 cliques from original graph
     LevelId level = 0;
     for (CellId cellId = 0; cellId < overlay->num_cells_in_level(level); cellId++)
     {
@@ -40,8 +43,7 @@ void CRPAlgorithm::customize()
     }
 
     // compute level i cliques from level i - 1 cliques
-
-    for (LevelId level = 1; level < params.number_of_levels; level++)
+    for (LevelId level = 1; level < overlay->get_number_of_levels(); level++)
     {
         for (CellId cellId = 0; cellId < overlay->num_cells_in_level(level); cellId++)
         {
@@ -87,4 +89,5 @@ void CRPAlgorithm::customize()
         }
     }
 }
+
 } // namespace crp
