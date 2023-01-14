@@ -13,6 +13,7 @@ lib_source_files = [
     'crp/crp-prepare.cpp',
     'crp/crp-query.cpp',
     'crp/crp-customization.cpp',
+    'path-unpacker.cpp',
 ]
 
 crp_lib_includes = [project_inc_dirs, lib_includes]

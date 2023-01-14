@@ -2,7 +2,7 @@
 #include "data-types.h"
 #include "graph.h"
 
-bool crp::PathUnpacker::isPathCorrect(std::vector<NodeId> *path, Graph *g, Distance dist)
+crp::PathUnpackingResult crp::isPathCorrect(std::vector<NodeId> *path, Graph *g, Distance dist)
 {
     NodeId u, v;
     Distance path_length = 0;
@@ -11,22 +11,18 @@ bool crp::PathUnpacker::isPathCorrect(std::vector<NodeId> *path, Graph *g, Dista
         u = (*path)[i];
         v = (*path)[i + 1];
 
-        // check if {u,v} edge present in graph
-        bool present = false;
-        for (auto [to, w] : (*g)[u])
-        { // edge i -> to with wieght w
-            if (to == v)
-            {
-                present = true;
-                path_length += w;
-                break;
-            }
+        auto w = g->get_edge(u, v);
+        if (!w)
+        {
+            return PathUnpackingResult::EdgeMissing;
         }
-        if (!present)
-            return false;
+        else
+        {
+            path_length += w.value();
+        }
     }
 
     if (dist != path_length)
-        return false;
-    return true;
+        return PathUnpackingResult::TotalLengthWrong;
+    return PathUnpackingResult::Ok;
 }
