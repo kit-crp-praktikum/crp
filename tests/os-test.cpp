@@ -34,8 +34,8 @@ TEST_CASE("Grid graph n=8")
     };
 
     // Generate the border nodes for the level 0.
-    // As the level 0 cells are 2x2, most of the nodes are border nodes
-    // at that level.
+    // As the level 0 cells are 2x2, all of the nodes are border nodes to other cells, except
+    // the nodes in the corners.
     std::vector<std::vector<NodeId>> border_nodes0;
     for (int cell = 0; cell < 16; cell++)
     {
@@ -47,12 +47,10 @@ TEST_CASE("Grid graph n=8")
                 int cur = encode(i, j);
                 if (rp.mask[cur] == cell)
                 {
-                    if ((i % 4 == 0 || i % 4 == 3) && (j % 4 == 0 || j % 4 == 3))
+                    if (cur != 0 && cur != 7 && cur != 56 && cur != 63)
                     {
-                        continue;
+                        border_nodes0.back().push_back(cur);
                     }
-
-                    border_nodes0.back().push_back(cur);
                 }
             }
         }

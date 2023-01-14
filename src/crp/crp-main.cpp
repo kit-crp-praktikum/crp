@@ -39,7 +39,7 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
             {
                 // Border nodes are nodes which have an edge to an adjacent cell.
                 // To avoid duplicates, we only add undirected edges in one direction (u < v).
-                if ((u < v || !g->get_edge(v, u)) && (partition.find_level_differing(u, v) == level))
+                if ((u < v || !g->get_edge(v, u)) && (partition.find_level_differing(u, v) >= level))
                 {
                     try_add_node(u);
                     try_add_node(v);
