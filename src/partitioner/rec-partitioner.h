@@ -1,8 +1,11 @@
 #pragma once
 
-#include "bfs-partitioner.h"
-#include "src/data-types.h"
+#include <algorithm>
+#include <numeric>
 #include <vector>
+
+#include "bipartitioner.h"
+#include "src/data-types.h"
 
 /**
  * Recursive partitioning using 2-partitioner interface
@@ -14,210 +17,173 @@ using ClusterId = uint32_t;
 
 namespace partitioner
 {
-template <class BiPartitioner> class RecPartitioner
+class RecPartitioner
 {
+  private:
+    // incapsulates all information of a cell during the recursive algorithm
+    struct Subgraph
+    {
+        crp::AdjacencyList graph;
+        std::vector<NodeId> mapping; // mapping to node ids in original graph
+        GeoData geo_data;
+
+        Subgraph()
+        {
+        }
+
+        // copy all structures!
+        Subgraph(crp::AdjacencyList gr, std::vector<NodeId> map, GeoData gd) : graph(gr), mapping(map)
+        {
+            geo_data = GeoData(gd.latitude, gd.longitude);
+        }
+    };
+
   public:
-    RecPartitioner(BiPartitioner *bip) : biPartitioner(bip)
+    RecPartitioner(BiPartitioner &_bi_partitioner, uint32_t _cells_per_level, uint32_t _number_of_levels)
+        : bi_partitioner(_bi_partitioner), cells_per_level(_cells_per_level), number_of_levels(_number_of_levels)
     {
     }
 
     /**
-     * Partition graph recursively
-     * Create bit masks for partitions
-     * @param cells_per_level: # of cells on each level
-     * @param levels: # of levels
-     * @param g: graph to be partitioned
-     * @return vector of bit masks for each node
+     * Partition graph recursively.
+     * Creates bit masks for partitions.
      */
-    std::vector<NodeId> *partition_rec(int cells_per_level, int levels,
-                                       std::vector<std::vector<std::pair<NodeId, Distance>>> *g)
+    std::vector<NodeId> partition_rec(crp::AdjacencyList &graph, GeoData &geo_data)
     {
-        masks.clear();
-        masks.resize(g->size());
+        std::vector<ClusterId> masks(graph.size(), 0);
+        std::vector<NodeId> map_default(graph.size());
+        std::iota(map_default.begin(), map_default.end(), 0);
 
-        // shift level info into masks
-        bits_for_mask = 0;
-        int shifted = cells_per_level;
-        while (shifted > 0)
-        {
-            shifted = (shifted >> 1);
-            bits_for_mask++;
-        }
+        // copy original graph, since we don't want to change input graph.
+        Subgraph original_graph(graph, std::move(map_default), geo_data);
 
-        std::vector<NodeId> map_default(g->size());
-        for (NodeId i = 0; i < g->size(); i++)
-        {
-            map_default[i] = i;
-        }
-
-        partition_rec_impl(cells_per_level, levels, g, &map_default);
-        return &masks;
+        partition_rec_impl(original_graph, masks, number_of_levels);
+        return masks;
     }
 
   private:
     /**
      * Returns a bitmask for each node indicating which cells it belongs to.
-     * Private version for recursive calls
-     * @param cells_per_level: # of cells on each level
-     * @param levels: # of levels
-     * @param g: graph to be partitioned
      */
-    void partition_rec_impl(int cells_per_level, int levels, std::vector<std::vector<std::pair<NodeId, Distance>>> *g,
-        std::vector<NodeId> * map_default)
+    void partition_rec_impl(Subgraph &graph, std::vector<ClusterId> &masks, uint32_t current_level)
     {
-        if (levels == 0)
+        if (current_level == 0)
             return;
 
-        // variables for graphs and mappings of the new partitiones
-        std::vector<NodeId> map_new_orig0[cells_per_level], map_new_orig1[cells_per_level];
-        std::vector<std::vector<std::pair<NodeId, Distance>>> cell0[cells_per_level], cell1[cells_per_level];
-
-        // contains each current cell's graph on this level, and node id mapping to original id-s
-        std::vector<std::vector<std::vector<std::pair<NodeId, Distance>>> *> cells;
-        std::vector<std::vector<NodeId> *> mappings;
-
-        mappings.push_back(map_default);
-        cells.push_back(g);
+        // at the beginning we only have one cell with one mapping to the original graph
+        std::vector<Subgraph> subgraphs;
+        subgraphs.push_back(std::move(graph));
 
         // divide largest cell in two until there are cells_per_level cells
-        for (int cell_cnt = 1; cell_cnt < cells_per_level; cell_cnt++)
+        while (subgraphs.size() < cells_per_level)
         {
-            // find largest cell
-            unsigned divide_pos = 0;
-            for (unsigned i = 1; i < cells.size(); i++)
-            {
-                if (cells[i]->size() > cells[divide_pos]->size())
-                    divide_pos = i;
-            }
-            std::vector<std::vector<std::pair<NodeId, Distance>>> *cell_to_divide = cells[divide_pos];
-
             // partition largest cell
-            std::vector<bool>* nodes01 = (*biPartitioner).partition(cell_to_divide);
+            uint32_t divide_pos = find_largest_cell(subgraphs);
 
-            // calculate new cells and mappings
-            divide_graph(mappings[divide_pos], nodes01, cell_to_divide, &map_new_orig0[cell_cnt],
-                         &map_new_orig1[cell_cnt], &cell0[cell_cnt], &cell1[cell_cnt]);
+            // swap largest cell to last position
+            std::swap(subgraphs[divide_pos], subgraphs.back());
+            std::vector<bool> bipartition = bi_partitioner.partition(subgraphs.back().graph, subgraphs.back().geo_data);
 
-            // remove old cell, add two new cells
-            cells.erase(cells.begin() + divide_pos);
-            mappings.erase(mappings.begin() + divide_pos);
-            cells.push_back(&cell0[cell_cnt]);
-            mappings.push_back(&map_new_orig0[cell_cnt]);
-            cells.push_back(&cell1[cell_cnt]);
-            mappings.push_back(&map_new_orig1[cell_cnt]);
+            // calculate new cells and mappings for last graph in the list and delete it
+            divide_last_graph(subgraphs, bipartition);
         }
 
-        // update masks for current layer's cells
-        for (ClusterId part_id = 0; part_id < mappings.size(); part_id++)
-        {
-            std::vector<NodeId> *part_mapping = mappings[part_id];
-            for (auto v_orig : (*part_mapping))
-            {   
-                // v_orig: original index in graph
-                masks[v_orig] = masks[v_orig] << bits_for_mask;
-                masks[v_orig] = masks[v_orig] | part_id;
-            }
-            
-        }
+        update_masks(masks, subgraphs, current_level);
 
         // divide cells into cells on lower level recursively
-        for (int i = 0; i < cells_per_level; i++)
+        for (uint32_t i = 0; i < cells_per_level; i++)
         {
-            partition_rec_impl(cells_per_level, levels - 1, cells[i], mappings[i]);
+            partition_rec_impl(subgraphs[i], masks, current_level - 1);
         }
         return;
     }
 
-    /**
-     * divide current graph into two smaller ones
-     * there are three kinds of graphs, each with its own node labeling:
-     * - original: the graph at the very beginning
-     * - actual: graph which is being divided
-     * - new: the newly created two graphs
-     * @param map_act_orig: maps actual graph indices to original ones
-     * @param nodes01: nodes of two partitions coded as 0-1 vector
-     * @param g: graph to divide (actual graph)
-     * @return multiple values by pointers: map_new_orig_0, map_new_orig_1, g0, g1
-     *
-     */
-    void divide_graph(std::vector<NodeId> *map_act_orig, std::vector<bool> *part_nodes,
-                      std::vector<std::vector<std::pair<NodeId, Distance>>> *g, std::vector<NodeId> *map_new_orig_0,
-                      std::vector<NodeId> *map_new_orig_1, std::vector<std::vector<std::pair<NodeId, Distance>>> *g0,
-                      std::vector<std::vector<std::pair<NodeId, Distance>>> *g1)
+    uint32_t find_largest_cell(std::vector<Subgraph> &subgraphs)
     {
-        // create new_orig mapping
-        std::vector<NodeId> map_act_new_0(g->size());
-        std::vector<NodeId> map_act_new_1(g->size());
-
-        for (unsigned i = 0; i < g->size(); i++)
+        uint32_t divide_pos = 0;
+        for (uint32_t i = 1; i < subgraphs.size(); i++)
         {
-            map_act_new_0[i] = invalid_id;
-            map_act_new_1[i] = invalid_id;
+            if (subgraphs[i].graph.size() > subgraphs[divide_pos].graph.size())
+                divide_pos = i;
         }
+        return divide_pos;
+    }
 
-        unsigned g0_size = std::count(part_nodes->begin(), part_nodes->end(), false);
-        unsigned g1_size = part_nodes->size() - g0_size;
-
-        (*map_new_orig_0).resize(g0_size);
-        (*map_new_orig_1).resize(g1_size);
-
-        NodeId new_node_id0 = 0;
-        NodeId new_node_id1 = 0;
-
-        // create new->orig mappings
-        for (NodeId node = 0; node < part_nodes->size(); node++)
+    void update_masks(std::vector<ClusterId> &masks, std::vector<Subgraph> &subgraphs, uint32_t level)
+    {
+        const uint32_t bits_per_level = 32 - __builtin_clz(cells_per_level - 1);
+        const uint32_t shift = bits_per_level * (number_of_levels - level);
+        // update masks for current layer's cells
+        for (ClusterId part_id = 0; part_id < subgraphs.size(); part_id++)
         {
-            if (((*part_nodes)[node] == false))
+            for (auto v_orig : subgraphs[part_id].mapping)
             {
-                // node in partition 0
-                (*map_new_orig_0)[new_node_id0] = (*map_act_orig)[node];
-                map_act_new_0[node] = new_node_id0;
-                new_node_id0++;
-            }
-            else
-            {
-                // node in partition 1
-                (*map_new_orig_1)[new_node_id1] = (*map_act_orig)[node];
-                map_act_new_1[node] = new_node_id1;
-                new_node_id1++;
-            }
-        }
-
-        // create new graphs
-        g0->resize(g0_size);
-        g1->resize(g1_size);
-        // find u->v edge in actual graph, add it to new graph
-        for (NodeId u_act = 0; u_act < part_nodes->size(); u_act++) {
-            if ((*part_nodes)[u_act] == false) {
-                // u_act in g0
-                NodeId u_new = map_act_new_0[u_act];
-                for (auto [v_act, weight] : (*g)[u_act]) {
-                    NodeId v_new = map_act_new_0[v_act];
-                    // check if v is also in g0's partition
-                    if (v_new != invalid_id)
-                    {
-                        (*g0)[u_new].push_back({v_new, weight});
-                    }
-                }
-            }
-            else {
-                // u_act in g1
-                NodeId u_new = map_act_new_1[u_act];
-                for (auto [v_act, weight] : (*g)[u_act]) {
-                    NodeId v_new = map_act_new_1[v_act];
-                    // check if v is also in g1's partition
-                    if (v_new != invalid_id)
-                    {
-                        (*g1)[u_new].push_back({v_new, weight});
-                    }
-                }
+                // v_orig: original index in graph
+                masks[v_orig] = masks[v_orig] | (part_id << shift);
             }
         }
     }
 
+    /**
+     * divide last graph in vector into two smaller ones
+     */
+    void divide_last_graph(std::vector<Subgraph> &subgraphs, std::vector<bool> &bipartition)
+    {
+        // move last subgraph out of vector
+        const uint32_t N = bipartition.size();
+        Subgraph to_divide = std::move(subgraphs.back());
+        subgraphs.pop_back();
+
+        std::vector<NodeId> original_to_local(N);
+
+        // create two new subgraphs
+        Subgraph new_graphs[2];
+        NodeId new_node_id[2] = {0, 0};
+        uint32_t g_sizes[2];
+        g_sizes[0] = std::count(bipartition.begin(), bipartition.end(), false);
+        g_sizes[1] = N - g_sizes[0];
+        for (int i = 0; i < 2; i++)
+        {
+            uint32_t n = g_sizes[i];
+            new_graphs[i].graph.resize(n);
+            new_graphs[i].mapping.resize(n);
+            new_graphs[i].geo_data.latitude.resize(n);
+            new_graphs[i].geo_data.longitude.resize(n);
+        }
+
+        // create new mappings and geo data
+        for (NodeId v = 0; v < N; v++)
+        {
+            bool side = bipartition[v];
+            uint32_t next_node = new_node_id[side];
+            new_node_id[side]++;
+            new_graphs[side].mapping[next_node] = to_divide.mapping[v];
+            new_graphs[side].geo_data.longitude[next_node] = to_divide.geo_data.longitude[v];
+            new_graphs[side].geo_data.latitude[next_node] = to_divide.geo_data.latitude[v];
+            original_to_local[v] = next_node;
+        }
+
+        // find u->v edge in actual graph, add it to new graph
+        for (NodeId v = 0; v < bipartition.size(); v++)
+        {
+            bool side = bipartition[v];
+            for (auto [w, weight] : to_divide.graph[v])
+            {
+                if (bipartition[v] == bipartition[w])
+                {
+                    NodeId local_v = original_to_local[v];
+                    NodeId local_w = original_to_local[w];
+                    new_graphs[side].graph[local_v].push_back({local_w, weight});
+                }
+            }
+        }
+        subgraphs.push_back(std::move(new_graphs[0]));
+        subgraphs.push_back(std::move(new_graphs[1]));
+    }
+
   private:
-    BiPartitioner *biPartitioner;
-    std::vector<ClusterId> masks;
-    int bits_for_mask;
+    BiPartitioner &bi_partitioner;
+    uint32_t cells_per_level;
+    uint32_t number_of_levels;
 };
 } // namespace partitioner
