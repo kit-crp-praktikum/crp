@@ -18,15 +18,22 @@ std::pair<NodeId, Distance> CRPAlgorithm::_query(NodeId start, NodeId end)
             }
         }
 
-        // Iterate clique
-        const CellId cellId = overlay->get_cell_for_node(u, level);
-        const NodeId uId = overlay->get_internal_id(u, level);
-        const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(level, cellId);
-        for (NodeId vId = 0; vId < neighbors.size(); vId++)
+        if (level >= 0)
         {
-            if (vId != uId)
+            // Iterate clique
+            const CellId cellId = overlay->get_cell_for_node(u, level);
+            const NodeId uId = overlay->get_internal_id(u, level);
+            if (uId != g->num_nodes())
             {
-                relaxOp(neighbors[vId], *overlay->get_distance(level, cellId, uId, vId));
+                const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(level, cellId);
+                for (NodeId vId = 0; vId < neighbors.size(); vId++)
+                {
+                    if (vId != uId)
+                    {
+                        auto dist = *overlay->get_distance(level, cellId, uId, vId);
+                        relaxOp(neighbors[vId], dist);
+                    }
+                }
             }
         }
     };
@@ -43,15 +50,21 @@ std::pair<NodeId, Distance> CRPAlgorithm::_query(NodeId start, NodeId end)
             }
         }
 
-        // Iterate clique
-        const CellId cellId = overlay->get_cell_for_node(u, level);
-        const NodeId uId = overlay->get_internal_id(u, level);
-        const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(level, cellId);
-        for (NodeId vId = 0; vId < neighbors.size(); vId++)
+        if (level >= 0)
         {
-            if (vId != uId)
+            // Iterate clique
+            const CellId cellId = overlay->get_cell_for_node(u, level);
+            const NodeId uId = overlay->get_internal_id(u, level);
+            if (uId != g->num_nodes())
             {
-                relaxOp(neighbors[vId], *overlay->get_distance(level, cellId, vId, uId));
+                const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(level, cellId);
+                for (NodeId vId = 0; vId < neighbors.size(); vId++)
+                {
+                    if (vId != uId)
+                    {
+                        relaxOp(neighbors[vId], *overlay->get_distance(level, cellId, vId, uId));
+                    }
+                }
             }
         }
     };
@@ -73,25 +86,31 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
     std::vector<NodeId> path;
     path.push_back(start);
 
-    for (unsigned i = 0; i < path_with_shortcuts.size()-1; i++) {
+    for (unsigned i = 0; i < path_with_shortcuts.size() - 1; i++)
+    {
         NodeId u = path_with_shortcuts[i];
-        NodeId v = path_with_shortcuts[i+1];
+        NodeId v = path_with_shortcuts[i + 1];
         // is u-v edge shortcut?
         bool is_shortcut = true;
-        for (auto [to, w] : (*g)[u]) {
+        for (auto [to, w] : (*g)[u])
+        {
             // edge u -> to with wieght w
-            if (to == v) {
+            if (to == v)
+            {
                 is_shortcut = false;
                 break;
             }
         }
-        if (! is_shortcut) { // u-v real edge of path
+        if (!is_shortcut)
+        { // u-v real edge of path
             path.push_back(v);
-        } else { // u-v shortcut, find shortest path with bidijkstra
+        }
+        else
+        { // u-v shortcut, find shortest path with bidijkstra
             // search on lowest level where they are in the same cell, only inside the cell
-            auto search_level = partition.find_level_differing(u, v) +1;
-            
-            CellId cellId = overlay->get_cell_for_node(u,search_level);
+            auto search_level = partition.find_level_differing(u, v) + 1;
+
+            CellId cellId = overlay->get_cell_for_node(u, search_level);
             // fwd neighbors
             auto neighbors_in_cell_fwd = [&](NodeId v, auto f) {
                 for (auto [to, weight] : (*g)[v])
@@ -103,7 +122,7 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
                     }
                 }
             };
-            cellId = overlay->get_cell_for_node(v,search_level);
+            cellId = overlay->get_cell_for_node(v, search_level);
             // bwd neighbors
             auto neighbors_in_cell_bwd = [&](NodeId v, auto f) {
                 for (auto [to, weight] : (reverse)[v])
@@ -117,10 +136,13 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
             };
 
             // run bidijkstra
-            auto [u_v_middle, u_v_dist] = bidir_dijkstra->compute_distance_target<true>(u, v, neighbors_in_cell_fwd, neighbors_in_cell_bwd);
+            auto [u_v_middle, u_v_dist] =
+                bidir_dijkstra->compute_distance_target<true>(u, v, neighbors_in_cell_fwd, neighbors_in_cell_bwd);
             auto u_v_path = bidir_dijkstra->unpack(u, v, u_v_middle);
-            for (auto node : u_v_path) {
-                if (node == u) continue;
+            for (auto node : u_v_path)
+            {
+                if (node == u)
+                    continue;
                 path.push_back(node);
             }
         }
