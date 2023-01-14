@@ -2,6 +2,7 @@
 
 #include "crp/crp.h"
 #include "graph.h"
+#include "partitioner/geo-data.h"
 #include <iomanip>
 #include <iostream>
 
@@ -30,6 +31,25 @@ inline crp::AdjacencyList generate_grid_graph(int n)
     }
 
     return adj_list;
+}
+
+// Generate embedding for n x n grid graph
+inline partitioner::GeoData generate_grid_graph_embedding(int n)
+{
+    uint32_t nr_cells = n * n;
+    partitioner::GeoData geo_data;
+    geo_data.latitude.resize(nr_cells);
+    geo_data.longitude.resize(nr_cells);
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            geo_data.latitude[encode(i, j)] = i;
+            geo_data.longitude[encode(i, j)] = j;
+        }
+    }
+    return geo_data;
 }
 
 // N must be a power of two.
