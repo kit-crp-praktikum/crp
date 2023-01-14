@@ -19,5 +19,7 @@ class BiPartitioner
      * Partitions the graph into two parts.
      */
     virtual std::vector<bool> partition(crp::AdjacencyList &graph, GeoData &geo_data) = 0;
+
+    virtual ~BiPartitioner() = default;
 };
 } // namespace partitioner
