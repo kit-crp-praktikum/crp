@@ -96,3 +96,21 @@ inline void dump_grid_graph_node_ids(int n)
     }
     std::cout << std::endl;
 }
+
+
+inline void grid_graph_print_recursive_partition(int n, crp::RecursivePartition &partition)
+{
+    for (int lv = 0; lv < partition.number_of_levels; lv++) 
+    {
+        std::cout << "Level " << lv << std::endl;
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                std::cout << std::setw(2) << std::setfill(' ') << partition.find_cell_for_node(encode(i, j), lv) << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+    }
+}
