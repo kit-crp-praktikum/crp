@@ -37,9 +37,14 @@ struct RecursivePartition
 
     inline int find_cell_for_node(NodeId u, int level)
     {
-        const uint32_t bits_per_level = 32 - __builtin_clz(cells_per_level - 1);
+        const uint32_t bits_per_level = get_bits_per_level();
         uint32_t bits = (number_of_levels - level) * bits_per_level;
         return mask[u] & ((1 << bits) - 1);
+    }
+
+    inline uint32_t get_bits_per_level() const
+    {
+        return 32 - __builtin_clz(cells_per_level - 1);
     }
 };
 
@@ -72,6 +77,9 @@ struct OverlayStructure
     // The i-th node in the list returned is the node with internal ID i.
     std::span<NodeId> get_border_nodes_for_cell(LevelId level, CellId cell);
 
+    // Get a list of the cellIds contained in the current cell at level - 1
+    std::span<CellId> get_child_cellIds(LevelId level, CellId cell);
+
     // Returns the number of levels in the recursive partition.
     int get_number_of_levels();
 
@@ -91,6 +99,10 @@ struct OverlayStructure
     // Cells on each level are numbered from 0 to the number of cells on that level.
     // Levels are numbered 0..(number_of_levels-1), where level -1 contains isolated nodes only.
     std::vector<std::vector<std::vector<NodeId>>> border_nodes;
+
+    // child_cell_ids[level][cell] 
+    // contains all cellIds of level - 1, which are contained in the current cell
+    std::vector<std::vector<std::vector<CellId>>> child_cell_ids;
 
     RecursivePartition partition;
 };
