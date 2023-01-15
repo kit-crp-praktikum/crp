@@ -4,6 +4,7 @@
 #include "datastructure/timestamped_vector.hpp"
 #include "lib/id_queue.h"
 #include <vector>
+#include <iostream>
 
 /**
  * Implementation of Bellman-Ford Algorithm.
@@ -19,6 +20,13 @@
  *      std::cout << u << " " << weight << "\n";
  *  };
  *  neighbors(0, myf);
+ * 
+ * 
+ * auto for_all_nodes = [&](auto f) {
+ *     for(NodeId v = 0; v < n; v++) {
+ *          f(v);       
+ *     }
+ * };
  */
 class BellmanFord
 {
@@ -27,7 +35,7 @@ class BellmanFord
     {
     }
 
-    template <bool update_parents = false> void compute_distance(NodeId start, auto neighbors)
+    template <bool update_parents = false> void generic_compute_distance(NodeId start, auto neighbors, auto for_all_nodes)
     {
         reset();
         distance[start] = 0;
@@ -35,7 +43,7 @@ class BellmanFord
         for (uint32_t i = 0; i < number_of_nodes - 1 && changed; i++)
         {
             changed = false;
-            for (NodeId v = 0; v < number_of_nodes; v++)
+            auto relax_neighbors = [&](NodeId v) 
             {
                 auto relax_operation = [&](NodeId u, Distance weight) {
                     Distance relaxed = distance[v] + weight;
@@ -48,8 +56,21 @@ class BellmanFord
                     }
                 };
                 neighbors(v, relax_operation);
-            }
+            };
+            for_all_nodes(relax_neighbors);
         }
+    }
+
+    template <bool update_parents = false> void compute_distance(NodeId start, auto neighbors)
+    {
+        auto for_all_nodes = [&](auto f)
+        {
+            for(NodeId v = 0; v < number_of_nodes; v++)
+            {
+                f(v);
+            }
+        };
+        generic_compute_distance<update_parents>(start, neighbors, for_all_nodes);
     }
 
     // Return distance to node, if v is in same connected component as start node.

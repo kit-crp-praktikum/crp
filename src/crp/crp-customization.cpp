@@ -57,7 +57,7 @@ void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto compu
                 const NodeId internal_u = overlay->get_internal_id(u, prev_level);
                 const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(prev_level, lower_cell_u);
                 // invalid ID -> is no border node
-                if (internal_u == g->num_nodes())
+                if (internal_u == (NodeId)g->num_nodes())
                     return;
 
                 for (NodeId internal_to = 0; internal_to < neighbors.size(); internal_to++)

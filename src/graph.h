@@ -61,7 +61,7 @@ class Graph
     // print graph for debugging purposes
     void print() 
     {
-        for(NodeId v = 0; v < num_nodes(); v++)
+        for(int v = 0; v < num_nodes(); v++)
         {
             std::cout << v << " -> ";
             for(NodeId e = first_out[v]; e < first_out[v + 1]; e++)
