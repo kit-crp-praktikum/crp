@@ -76,9 +76,7 @@ inline crp::RecursivePartitionMask generate_two_level_partition(int n)
             mask <<= 1;
             mask |= !!(j & level1_bit);
             result[cur] = mask;
-            std::cout << std::setw(2) << std::setfill(' ') << mask << " ";
         }
-        std::cout << std::endl;
     }
 
     return result;

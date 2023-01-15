@@ -25,9 +25,7 @@ static crp::CRPAlgorithmParams gen_params_8x8()
         return rp;
     };
 
-    params.customizer = [](crp::Graph *g, crp::OverlayStructure *os) {
-        // nothing as of yet, since customizer is hardcoded
-    };
+    params.customizer = crp::customize_with_dijkstra;
 
     dump_grid_graph_node_ids(n);
     return params;

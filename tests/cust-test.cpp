@@ -27,7 +27,10 @@ TEST_CASE("Grid graph n=8")
     rp.mask = generate_two_level_partition(n);
 
     auto partitioner = [&](crp::Graph *g, int number_of_levels, int cells_per_level) { return rp; };
-    auto customizer = crp::customize_with_dijkstra;
+    // auto customizer = crp::customize_with_dijkstra;
+    // auto customizer = crp::customize_dijkstra_rebuild;
+    auto customizer = crp::customize_bellman_ford_rebuild;
+    // auto customizer = crp::customize_floyd_warshall_rebuild;
 
     crp::CRPAlgorithmParams param = {rp.number_of_levels, rp.cells_per_level, partitioner, customizer};
     crp::CRPAlgorithm crp(param);
@@ -61,7 +64,7 @@ TEST_CASE("Grid graph n=8")
                     NodeId vId = crp.overlay->get_internal_id(v, level);
                     NodeId uId = crp.overlay->get_internal_id(u, level);
                     Distance d = *crp.overlay->get_distance(level, cell, vId, uId);
-                    CHECK(d == manhatten_distance(v, u));
+                    REQUIRE(d == manhatten_distance(v, u));
                 }
             }
         }
