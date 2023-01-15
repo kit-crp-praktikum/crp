@@ -11,10 +11,11 @@
 #include "crp/crp.h"
 #include "grid-graph.hpp"
 
-TEST_CASE("Grid graph n=8")
+// cannot pass customizer as function in doctest
+void test_customization_on_grid_graph(int n, int customizer_nr, bool print = false)
 {
-    // copied graph and partition from os-test.cpp
-    const int n = 8;
+    // n must be a power of two
+    REQUIRE((n & (n - 1)) == 0);
     crp::Graph g{generate_grid_graph(n)};
 
     // Generate simple 2-level partition
@@ -23,23 +24,24 @@ TEST_CASE("Grid graph n=8")
     rp.number_of_levels = 2;
     rp.mask.resize(g.num_nodes());
 
-    dump_grid_graph_node_ids(n);
     rp.mask = generate_two_level_partition(n);
+    if (print) dump_grid_graph_node_ids(n);
+    if (print) grid_graph_print_recursive_partition(n, rp);
 
     auto partitioner = [&](crp::Graph *g, int number_of_levels, int cells_per_level) { return rp; };
-    // auto customizer = crp::customize_with_dijkstra;
-    auto customizer = crp::customize_with_bellman_ford;
 
-    // auto customizer = crp::customize_dijkstra_rebuild;
-    // auto customizer = crp::customize_bellman_ford_rebuild;
-    // auto customizer = crp::customize_floyd_warshall_rebuild;
+    auto customizer = [&](crp::Graph *g, crp::OverlayStructure *overlay) {
+        crp::customize_with_dijkstra(g, overlay);
+             if(customizer_nr == 0) crp::customize_with_dijkstra(g, overlay);
+        else if(customizer_nr == 1) crp::customize_with_bellman_ford(g, overlay);
+        else if(customizer_nr == 2) crp::customize_dijkstra_rebuild(g, overlay);
+        else if(customizer_nr == 3) crp::customize_bellman_ford_rebuild(g, overlay);
+        else if(customizer_nr == 4) crp::customize_floyd_warshall_rebuild(g, overlay);
+    };
 
     crp::CRPAlgorithmParams param = {rp.number_of_levels, rp.cells_per_level, partitioner, customizer};
     crp::CRPAlgorithm crp(param);
     crp.prepare(&g);
-
-    grid_graph_print_recursive_partition(n, rp);
-
     crp.customize();
 
     auto decode = [&](NodeId v) {
@@ -71,4 +73,29 @@ TEST_CASE("Grid graph n=8")
             }
         }
     }
+}
+
+TEST_CASE("Grid graph n=8 customize_with_dijkstra")
+{
+    test_customization_on_grid_graph(8, 0, true);
+};
+
+TEST_CASE("Grid graph n=8 customize_with_bellman_ford")
+{
+    test_customization_on_grid_graph(8, 1);
+};
+
+TEST_CASE("Grid graph n=8 customize_dijkstra_rebuild")
+{
+    test_customization_on_grid_graph(8, 2);
+};
+
+TEST_CASE("Grid graph n=8 customize_bellman_ford_rebuild")
+{
+    test_customization_on_grid_graph(8, 3);
+};
+
+TEST_CASE("Grid graph n=8 customize_floyd_warshall_rebuild")
+{
+    test_customization_on_grid_graph(8, 4);
 };
