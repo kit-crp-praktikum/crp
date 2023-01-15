@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace crp
 {
@@ -49,6 +50,27 @@ class Graph
      * Get a copy of the graph, but reversed.
      */
     Graph reversed() const;
+  
+    void clear() 
+    {
+        first_out.clear();
+        head.clear();
+        weights.clear();
+    }
+
+    // print graph for debugging purposes
+    void print() 
+    {
+        for(NodeId v = 0; v < num_nodes(); v++)
+        {
+            std::cout << v << " -> ";
+            for(NodeId e = first_out[v]; e < first_out[v + 1]; e++)
+            {
+                std::cout << "(" << head[e] << ", " << weights[e] << ") ";
+            }
+            std::cout << "\n";
+        }
+    }
 
   public:
     std::vector<uint32_t> first_out;
