@@ -127,7 +127,7 @@ class Dijkstra
         return parent[v];
     }
 
-    std::vector<NodeId> unpack (NodeId s, NodeId t) {
+    std::vector<NodeId> unpack(NodeId s, NodeId t) {
         NodeId node = t;
         std::vector<NodeId> path;
         while (node != s)
