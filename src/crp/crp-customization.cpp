@@ -11,15 +11,12 @@ void CRPAlgorithm::customize()
     this->params.customizer(g, overlay.get());
 }
 
-void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
+void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto compute_clique)
 {
-    Dijkstra one_to_all(g->num_nodes());
-
     // compute level 0 cliques from original graph
     LevelId level = 0;
     for (CellId cellId = 0; cellId < overlay->num_cells_in_level(level); cellId++)
     {
-        const std::span<NodeId> border_nodes = overlay->get_border_nodes_for_cell(level, cellId);
         auto neighbors_in_cell = [&](NodeId v, auto f) {
             for (auto [to, weight] : (*g)[v])
             {
@@ -30,16 +27,7 @@ void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
                 }
             }
         };
-        for (NodeId u : border_nodes)
-        {
-            one_to_all.compute_distance<false>(u, neighbors_in_cell);
-            const NodeId internal_u = overlay->get_internal_id(u, level);
-            for (NodeId to : border_nodes)
-            {
-                const NodeId internal_to = overlay->get_internal_id(to, level);
-                *overlay->get_distance(level, cellId, internal_u, internal_to) = one_to_all.tentative_distance(to);
-            }
-        }
+        compute_clique(level, cellId, neighbors_in_cell);
     }
 
     // compute level i cliques from level i - 1 cliques
@@ -47,7 +35,6 @@ void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
     {
         for (CellId cellId = 0; cellId < overlay->num_cells_in_level(level); cellId++)
         {
-            const std::span<NodeId> border_nodes = overlay->get_border_nodes_for_cell(level, cellId);
             auto neighbors_in_cell = [&](NodeId u, auto f) {
                 const CellId upper_cell_u = overlay->get_cell_for_node(u, level);
                 // Iterate graph edges
@@ -75,19 +62,29 @@ void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
                       *overlay->get_distance(prev_level, lower_cellId, internal_u, internal_to));
                 }
             };
-
-            for (NodeId u : border_nodes)
-            {
-                one_to_all.compute_distance<false>(u, neighbors_in_cell);
-                const NodeId internal_u = overlay->get_internal_id(u, level);
-                for (NodeId to : border_nodes)
-                {
-                    const NodeId internal_to = overlay->get_internal_id(to, level);
-                    *overlay->get_distance(level, cellId, internal_u, internal_to) = one_to_all.tentative_distance(to);
-                }
-            }
+            compute_clique(level, cellId, neighbors_in_cell);
         }
     }
+}
+
+void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
+{
+    Dijkstra one_to_all(g->num_nodes());
+    auto compute_clique = [&](LevelId level, CellId cellId, auto neighbors_in_cell)
+    { 
+        const std::span<NodeId> border_nodes = overlay->get_border_nodes_for_cell(level, cellId);
+        for (NodeId u : border_nodes)
+        {
+            one_to_all.compute_distance<false>(u, neighbors_in_cell);
+            const NodeId internal_u = overlay->get_internal_id(u, level);
+            for (NodeId to : border_nodes)
+            {
+                const NodeId internal_to = overlay->get_internal_id(to, level);
+                *overlay->get_distance(level, cellId, internal_u, internal_to) = one_to_all.tentative_distance(to);
+            }
+        }
+    };
+    generic_customize(g, overlay, compute_clique);
 }
 
 } // namespace crp
