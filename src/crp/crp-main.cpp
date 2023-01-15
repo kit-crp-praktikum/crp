@@ -60,6 +60,7 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
         if(level > 0)
         {
             const uint32_t bits_per_level = partition.get_bits_per_level();
+            uint32_t bits = (partition.number_of_levels - level) * bits_per_level;
             CellId cells = partition.cells_per_level;
             CellId cells_in_level = num_cells_in_level;
             assert((cells & (cells - 1)) == 0);
@@ -68,15 +69,19 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
             {
                 for (CellId child_cell = 0; child_cell < cells; child_cell++)
                 {
-                    CellId c = (cell << bits_per_level) | child_cell;
+                    CellId c = (child_cell << bits) | cell;
                     child_cell_ids[level][cell].push_back(c);
                 }
             }
         }   
     }
 
-
-
+    nodes_in_level_0.resize(num_cells_in_level);
+    for(NodeId u = 0; u < g->num_nodes(); u++)
+    {   
+        CellId cell = partition.find_cell_for_node(u, 0);
+        nodes_in_level_0[cell].push_back(u);
+    }
 }
 
 CellId OverlayStructure::get_cell_for_node(NodeId u, LevelId level)
@@ -92,6 +97,11 @@ std::span<NodeId> OverlayStructure::get_border_nodes_for_cell(LevelId level, Cel
 std::span<CellId> OverlayStructure::get_child_cellIds(LevelId level, CellId cell)
 {
     return child_cell_ids[level][cell];
+}
+
+std::span<NodeId> OverlayStructure::get_nodes_level0(CellId cell)
+{
+    return nodes_in_level_0[cell];
 }
 
 Distance *OverlayStructure::get_distance(LevelId level, CellId cell, NodeId a, NodeId b)

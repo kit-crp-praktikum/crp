@@ -80,6 +80,9 @@ struct OverlayStructure
     // Get a list of the cellIds contained in the current cell at level - 1
     std::span<CellId> get_child_cellIds(LevelId level, CellId cell);
 
+    // Get a list of nodes in level 0 cell.
+    std::span<NodeId> get_nodes_level0(CellId cell);
+
     // Returns the number of levels in the recursive partition.
     int get_number_of_levels();
 
@@ -103,6 +106,10 @@ struct OverlayStructure
     // child_cell_ids[level][cell] 
     // contains all cellIds of level - 1, which are contained in the current cell
     std::vector<std::vector<std::vector<CellId>>> child_cell_ids;
+
+    // nodes_in_level_0[cell] 
+    // contains all nodes in level 0 cell
+    std::vector<std::vector<NodeId>> nodes_in_level_0;
 
     RecursivePartition partition;
 };
@@ -147,6 +154,17 @@ class CRPAlgorithm : public CRPAlgorithmInterface
 };
 
 // customization variants
+
+// run dijkstra on original graph
 void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay);
+
+// run dijkstra on rebuild cell-graph
+void customize_dijkstra_rebuild(crp::Graph *g, crp::OverlayStructure *overlay);
+
+// run bellman-ford on rebuild cell-graph
+void customize_bellman_ford_rebuild(crp::Graph *g, crp::OverlayStructure *overlay);
+
+// run floyd-warshall on rebuild cell-graph
+void customize_floyd_warshall_rebuild(crp::Graph *g, crp::OverlayStructure *overlay);
 
 } // namespace crp
