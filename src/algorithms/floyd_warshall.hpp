@@ -3,7 +3,10 @@
 #include "lib/id_queue.h"
 #include "src/data-types.h"
 #include "src/datastructure/timestamped_vector.hpp"
+#include <cassert>
 #include <vector>
+
+#define FLOYD_WARSHALL_MAX_N 2000
 
 /**
  * Implementation of Floyd-Warshall Algorithm.
@@ -25,6 +28,7 @@ class FloydWarshall
   public:
     FloydWarshall(std::size_t size) : number_of_nodes(size), distance(size * size, INF), parent(size * size, INF)
     {
+        assert(size <= FLOYD_WARSHALL_MAX_N);
     }
 
     template <bool update_parents = false> void compute_all_distances(auto neighbors)
@@ -77,6 +81,7 @@ class FloydWarshall
     // - 1
     void set_number_of_nodes(std::size_t n)
     {
+        assert(n <= distance.size());
         number_of_nodes = n;
     }
 
@@ -93,7 +98,8 @@ class FloydWarshall
     }
 
     std::size_t number_of_nodes;
-    TimestampedVector<Distance>
-        distance; // represent 2d array as rolled out 1d array to use timestamped vector without modification
+    
+    // represent 2d array as rolled out 1d array to use timestamped vector without modification
+    TimestampedVector<Distance> distance;
     TimestampedVector<NodeId> parent;
 };
