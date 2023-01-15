@@ -35,7 +35,7 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
         };
 
         // Find border nodes for this level
-        for (NodeId u = 0; u < g->num_nodes(); u++)
+        for (NodeId u = 0; u < (NodeId)g->num_nodes(); u++)
         {
             for (auto [v, _] : (*g)[u])
             {
@@ -77,7 +77,7 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
     }
 
     nodes_in_level_0.resize(num_cells_in_level);
-    for(NodeId u = 0; u < g->num_nodes(); u++)
+    for(NodeId u = 0; u < (NodeId)g->num_nodes(); u++)
     {   
         CellId cell = partition.find_cell_for_node(u, 0);
         nodes_in_level_0[cell].push_back(u);

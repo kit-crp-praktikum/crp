@@ -1,5 +1,5 @@
-#include "algorithms/dijkstra.hpp"
 #include "algorithms/bellman_ford.hpp"
+#include "algorithms/dijkstra.hpp"
 #include "algorithms/floyd_warshall.hpp"
 #include "crp.h"
 
@@ -74,23 +74,72 @@ void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto compu
     }
 }
 
-void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
+
+void customize_with_shortest_path(crp::Graph *g, crp::OverlayStructure *overlay, auto init_algo,
+                                     auto process_node, auto distance)
 {
-    Dijkstra one_to_all(g->num_nodes());
-    auto compute_clique = [&](LevelId level, CellId cellId, auto neighbors_in_cell) {
+    auto algo = init_algo();
+
+    auto compute_clique = [&](LevelId level, CellId cellId, auto neighbors) {
         const std::span<NodeId> border_nodes = overlay->get_border_nodes_for_cell(level, cellId);
         for (NodeId u : border_nodes)
         {
-            one_to_all.compute_distance<false>(u, neighbors_in_cell);
+            process_node(algo, u, neighbors, level, cellId);
             const NodeId internal_u = overlay->get_internal_id(u, level);
             for (NodeId to : border_nodes)
             {
                 const NodeId internal_to = overlay->get_internal_id(to, level);
-                *overlay->get_distance(level, cellId, internal_u, internal_to) = one_to_all.tentative_distance(to);
+                *overlay->get_distance(level, cellId, internal_u, internal_to) = distance(algo, to);
             }
         }
     };
     generic_customize(g, overlay, compute_clique);
+}
+
+void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
+{
+    auto init_algo = [&]() { return Dijkstra(g->num_nodes()); };
+    auto process_node = [&](Dijkstra &algo, NodeId u, auto neighbors, LevelId, CellId) { algo.compute_distance<false>(u, neighbors); };
+    auto distance = [&](Dijkstra &algo, NodeId to) { return algo.tentative_distance(to); };
+
+    customize_with_shortest_path(g, overlay, init_algo, process_node, distance);
+}
+
+void customize_with_bellman_ford(crp::Graph *g, crp::OverlayStructure *overlay)
+{
+    auto for_all_nodes = [&](LevelId level, CellId cellId, auto f) {
+        if (level == 0)
+        {
+            // all nodes in level zero cell
+            const std::span<NodeId> nodes_in_cell = overlay->get_nodes_level0(cellId);
+            for (NodeId v_orig : nodes_in_cell)
+            {
+                f(v_orig);
+            }
+        }
+        else
+        {
+            // union of border nodes of previous level
+            const std::span<CellId> child_cells = overlay->get_child_cellIds(level, cellId);
+            for (CellId child_cell : child_cells)
+            {
+                const std::span<NodeId> border_child = overlay->get_border_nodes_for_cell(level - 1, child_cell);
+                for (NodeId v_orig : border_child)
+                {
+                    f(v_orig);
+                }
+            }
+        }
+    };
+    // we don't set bellman ford size to subgraph size, but it will probably converge earlier -> worst case 1 iteration more than necessary 
+    auto init_algo = [&]() { return BellmanFord(g->num_nodes()); };
+    auto process_node = [&](BellmanFord &algo, NodeId u, auto neighbors, LevelId level, CellId cellId) 
+    {   
+        auto nodes = [&](auto f) {for_all_nodes(level, cellId, f);};
+        algo.generic_compute_distance<false>(u, neighbors, nodes); 
+    };
+    auto distance = [&](BellmanFord &algo, NodeId to) { return algo.tentative_distance(to); };
+    customize_with_shortest_path(g, overlay, init_algo, process_node, distance);
 }
 
 void customize_rebuild_graph(crp::Graph *g, crp::OverlayStructure *overlay, auto compute_clique_entries)

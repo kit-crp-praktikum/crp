@@ -158,6 +158,9 @@ class CRPAlgorithm : public CRPAlgorithmInterface
 // run dijkstra on original graph
 void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay);
 
+// run bellman-ford on original graph
+void customize_with_bellman_ford(crp::Graph *g, crp::OverlayStructure *overlay);
+
 // run dijkstra on rebuild cell-graph
 void customize_dijkstra_rebuild(crp::Graph *g, crp::OverlayStructure *overlay);
 
