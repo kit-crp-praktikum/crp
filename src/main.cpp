@@ -245,7 +245,7 @@ int main(int argc, char **argv)
             }
         });
 
-        std::cout << incorrect << " out of " << nr_queries << " are not correct." << std::endl;
+        std::cout << incorrect << " out of " << nr_queries << " queries are not correct." << std::endl;
     }
     else
     {
