@@ -3,10 +3,10 @@
 #include "data-types.h"
 #include "node-slice.h"
 #include <algorithm>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <vector>
-#include <iostream>
 
 namespace crp
 {
@@ -50,8 +50,10 @@ class Graph
      * Get a copy of the graph, but reversed.
      */
     Graph reversed() const;
-  
-    void clear() 
+
+    AdjacencyList to_list() const;
+
+    void clear()
     {
         first_out.clear();
         head.clear();
@@ -59,12 +61,12 @@ class Graph
     }
 
     // print graph for debugging purposes
-    void print() 
+    void print()
     {
-        for(int v = 0; v < num_nodes(); v++)
+        for (int v = 0; v < num_nodes(); v++)
         {
             std::cout << v << " -> ";
-            for(NodeId e = first_out[v]; e < first_out[v + 1]; e++)
+            for (NodeId e = first_out[v]; e < first_out[v + 1]; e++)
             {
                 std::cout << "(" << head[e] << ", " << weights[e] << ") ";
             }

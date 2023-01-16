@@ -1,3 +1,4 @@
+#include "partitioner/geo-data.h"
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
@@ -9,7 +10,7 @@
 class BidirDijkstraAlgo : public crp::CRPAlgorithmInterface
 {
   public:
-    void prepare(crp::Graph *graph)
+    void prepare(crp::Graph *graph, partitioner::GeoData *)
     {
         this->g = graph;
         bi_dijkstra = std::make_unique<BidirectionalDijstkra>(graph->num_nodes());
@@ -60,7 +61,7 @@ TEST_CASE("Test Bidirectional Dijkstra")
 class BellmanFordAlgo : public crp::CRPAlgorithmInterface
 {
   public:
-    void prepare(crp::Graph *graph)
+    void prepare(crp::Graph *graph, partitioner::GeoData *)
     {
         this->g = graph;
         this->bf = std::make_unique<BellmanFord>(g->num_nodes());
@@ -112,7 +113,7 @@ TEST_CASE("Test Bellman-Ford")
 class FloydWarshallAlgo : public crp::CRPAlgorithmInterface
 {
   public:
-    void prepare(crp::Graph *graph)
+    void prepare(crp::Graph *graph, partitioner::GeoData *)
     {
         this->g = graph;
         this->fs = std::make_unique<FloydWarshall>(g->num_nodes());

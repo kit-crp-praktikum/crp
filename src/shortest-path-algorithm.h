@@ -2,6 +2,7 @@
 
 #include "data-types.h"
 #include "graph.h"
+#include "partitioner/geo-data.h"
 #include <memory>
 
 namespace crp
@@ -16,7 +17,7 @@ class CRPAlgorithmInterface
      * Note that the graph's weights do not have to have been initialized at this point yet,
      * and can all be equal zero.
      */
-    virtual void prepare(Graph *graph) = 0;
+    virtual void prepare(Graph *graph, partitioner::GeoData *data) = 0;
 
     /**
      * Phase 2: Signal to the algorithm that the graph's weights have changed and it should update its

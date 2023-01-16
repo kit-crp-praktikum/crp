@@ -3,6 +3,7 @@
 #include "algorithms/dijkstra.hpp"
 #include "data-types.h"
 #include "graph.h"
+#include "partitioner/geo-data.h"
 #include "shortest-path-algorithm.h"
 #include <cstdint>
 #include <functional>
@@ -49,7 +50,8 @@ struct RecursivePartition
 };
 
 // A function which can compute a partition from (graph, number_of_levels, cells_per_level).
-using RecursivePartitionerFunction = std::function<RecursivePartition(crp::Graph *, int, int)>;
+using RecursivePartitionerFunction =
+    std::function<RecursivePartition(crp::Graph *, partitioner::GeoData *data, int, int)>;
 
 using LevelId = int;
 using CellId = int;
@@ -103,11 +105,11 @@ struct OverlayStructure
     // Levels are numbered 0..(number_of_levels-1), where level -1 contains isolated nodes only.
     std::vector<std::vector<std::vector<NodeId>>> border_nodes;
 
-    // child_cell_ids[level][cell] 
+    // child_cell_ids[level][cell]
     // contains all cellIds of level - 1, which are contained in the current cell
     std::vector<std::vector<std::vector<CellId>>> child_cell_ids;
 
-    // nodes_in_level_0[cell] 
+    // nodes_in_level_0[cell]
     // contains all nodes in level 0 cell
     std::vector<std::vector<NodeId>> nodes_in_level_0;
 
@@ -131,7 +133,7 @@ struct CRPAlgorithmParams
 class CRPAlgorithm : public CRPAlgorithmInterface
 {
   public:
-    void prepare(Graph *graph) override;
+    void prepare(Graph *graph, partitioner::GeoData *geo_data) override;
     void customize() override;
     Distance query(NodeId start, NodeId end) override;
     std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist) override;

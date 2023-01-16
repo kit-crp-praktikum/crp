@@ -1,3 +1,4 @@
+#include "partitioner/geo-data.h"
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
@@ -17,7 +18,7 @@ static crp::CRPAlgorithmParams gen_params_8x8()
     crp::CRPAlgorithmParams params;
     params.number_of_levels = 2;
     params.cells_per_level = 4;
-    params.partitioner = [](crp::Graph *g, int nr_levels, int cells_per_level) {
+    params.partitioner = [](crp::Graph *g, partitioner::GeoData *geo, int nr_levels, int cells_per_level) {
         crp::RecursivePartition rp;
         rp.cells_per_level = cells_per_level;
         rp.number_of_levels = nr_levels;

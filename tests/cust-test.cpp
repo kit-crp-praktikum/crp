@@ -1,6 +1,7 @@
 
 #include "data-types.h"
 #include "graph.h"
+#include "partitioner/geo-data.h"
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 #include <iomanip>
@@ -25,23 +26,33 @@ void test_customization_on_grid_graph(int n, int customizer_nr, bool print = fal
     rp.mask.resize(g.num_nodes());
 
     rp.mask = generate_two_level_partition(n);
-    if (print) dump_grid_graph_node_ids(n);
-    if (print) grid_graph_print_recursive_partition(n, rp);
+    if (print)
+        dump_grid_graph_node_ids(n);
+    if (print)
+        grid_graph_print_recursive_partition(n, rp);
 
-    auto partitioner = [&](crp::Graph *g, int number_of_levels, int cells_per_level) { return rp; };
+    auto partitioner = [&](crp::Graph *g, partitioner::GeoData *, int number_of_levels, int cells_per_level) {
+        return rp;
+    };
 
     auto customizer = [&](crp::Graph *g, crp::OverlayStructure *overlay) {
         crp::customize_with_dijkstra(g, overlay);
-             if(customizer_nr == 0) crp::customize_with_dijkstra(g, overlay);
-        else if(customizer_nr == 1) crp::customize_with_bellman_ford(g, overlay);
-        else if(customizer_nr == 2) crp::customize_dijkstra_rebuild(g, overlay);
-        else if(customizer_nr == 3) crp::customize_bellman_ford_rebuild(g, overlay);
-        else if(customizer_nr == 4) crp::customize_floyd_warshall_rebuild(g, overlay);
+        if (customizer_nr == 0)
+            crp::customize_with_dijkstra(g, overlay);
+        else if (customizer_nr == 1)
+            crp::customize_with_bellman_ford(g, overlay);
+        else if (customizer_nr == 2)
+            crp::customize_dijkstra_rebuild(g, overlay);
+        else if (customizer_nr == 3)
+            crp::customize_bellman_ford_rebuild(g, overlay);
+        else if (customizer_nr == 4)
+            crp::customize_floyd_warshall_rebuild(g, overlay);
     };
 
     crp::CRPAlgorithmParams param = {rp.number_of_levels, rp.cells_per_level, partitioner, customizer};
     crp::CRPAlgorithm crp(param);
-    crp.prepare(&g);
+    partitioner::GeoData geo_data{};
+    crp.prepare(&g, &geo_data);
     crp.customize();
 
     auto decode = [&](NodeId v) {

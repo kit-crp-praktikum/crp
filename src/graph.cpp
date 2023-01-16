@@ -25,6 +25,22 @@ crp::Graph::Graph(const AdjacencyList &adj_list)
     first_out.push_back(head.size());
 }
 
+crp::AdjacencyList crp::Graph::to_list() const
+{
+    NodeId n = num_nodes();
+
+    AdjacencyList list(n);
+    for (NodeId from = 0; from < n; from++)
+    {
+        for (auto [to, w] : (*this)[from])
+        {
+            list[from].push_back({to, w});
+        }
+    }
+
+    return list;
+}
+
 crp::Graph crp::Graph::reversed() const
 {
     AdjacencyList adj(num_nodes());

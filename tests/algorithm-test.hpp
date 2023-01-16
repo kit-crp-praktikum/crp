@@ -5,6 +5,7 @@
 #include "graph-generator.hpp"
 #include "graph.h"
 #include "grid-graph.hpp"
+#include "partitioner/geo-data.h"
 #include "path-unpacker.h"
 #include "shortest-path-algorithm.h"
 #include <iostream>
@@ -12,9 +13,10 @@
 #define _ << " " <<
 #define debug(x) #x << " = " << x
 
-inline void setup_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> &algorithm, crp::Graph *g)
+inline void setup_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> &algorithm, crp::Graph *g,
+                            partitioner::GeoData *geo_data)
 {
-    algorithm->prepare(g);
+    algorithm->prepare(g, geo_data);
 
     std::mt19937 mt(0);
     // Random integer in [l, r]
@@ -29,9 +31,10 @@ inline void setup_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> &algorit
 
 // NB: graph's weights are all 1, we generate real weights during customization
 inline void test_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm,
-                           crp::Graph g = generate_random_undirected_graph(100, 300, 1))
+                           crp::Graph g = generate_random_undirected_graph(100, 300, 1),
+                           partitioner::GeoData geo_data = {})
 {
-    setup_algorithm(algorithm, &g);
+    setup_algorithm(algorithm, &g, &geo_data);
 
     Dijkstra plain_dijkstra(g.num_nodes());
     const auto &shortest_path_dijkstra = [&](NodeId a, NodeId b) {
@@ -57,9 +60,10 @@ inline void test_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm
 
 // NB: graph's weights are all 1, we generate real weights during customization
 inline void test_algorithm_path(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm,
-                                crp::Graph g = generate_random_undirected_graph(100, 300, 1))
+                                crp::Graph g = generate_random_undirected_graph(100, 300, 1),
+                                partitioner::GeoData geo_data = {})
 {
-    setup_algorithm(algorithm, &g);
+    setup_algorithm(algorithm, &g, &geo_data);
 
     for (int a = 0; a < g.num_nodes(); a++)
     {
