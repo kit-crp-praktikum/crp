@@ -86,71 +86,67 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
     auto [middle, distance] = _query<true>(start, end);
     out_dist = distance;
 
-    auto path_with_shortcuts = bidir_dijkstra->unpack(start, end, middle);
-    std::vector<NodeId> path;
-    path.push_back(start);
+    auto path = bidir_dijkstra->unpack(start, end, middle);
 
-    for (unsigned i = 0; i < path_with_shortcuts.size() - 1; i++)
+    // go through all levels, top to bottom
+    // if two nodes are in the same cell on the current level, and in different ones one level below,
+    // unpack the shortcut / edge
+    for (int curr_level = partition.number_of_levels-1; curr_level >= 0; curr_level--) 
     {
-        NodeId u = path_with_shortcuts[i];
-        NodeId v = path_with_shortcuts[i + 1];
-        // is u-v edge shortcut?
-        bool is_shortcut = true;
-        for (auto [to, w] : (*g)[u])
+        for (unsigned i = 0; i < path.size() - 1; i++)
         {
-            // edge u -> to with wieght w
-            if (to == v)
-            {
-                is_shortcut = false;
-                break;
-            }
-        }
-        if (!is_shortcut)
-        { // u-v real edge of path
-            path.push_back(v);
-        }
-        else
-        { // u-v shortcut, find shortest path with bidijkstra
-            // search on lowest level where they are in the same cell, only inside the cell
-            auto search_level = partition.find_level_differing(u, v) + 1;
+            // consider u-v edge (possibly shortcut)
+            NodeId u = path[i];
+            NodeId v = path[i + 1];
 
-            CellId cellId = overlay->get_cell_for_node(u, search_level);
-            // fwd neighbors
-            auto neighbors_in_cell_fwd = [&](NodeId v, auto f) {
-                for (auto [to, weight] : (*g)[v])
-                {
-                    // all neighbors in g that have the same cellId
-                    if (overlay->get_cell_for_node(to, search_level) == cellId)
-                    {
-                        f(to, weight);
-                    }
-                }
-            };
-            cellId = overlay->get_cell_for_node(v, search_level);
-            // bwd neighbors
-            auto neighbors_in_cell_bwd = [&](NodeId v, auto f) {
-                for (auto [to, weight] : (reverse)[v])
-                {
-                    // all neighbors in g that have the same cellId
-                    if (overlay->get_cell_for_node(to, search_level) == cellId)
-                    {
-                        f(to, weight);
-                    }
-                }
-            };
-
-            // run bidijkstra
-            auto [u_v_middle, u_v_dist] =
-                bidir_dijkstra->compute_distance_target<true>(u, v, neighbors_in_cell_fwd, neighbors_in_cell_bwd);
-            auto u_v_path = bidir_dijkstra->unpack(u, v, u_v_middle);
-            for (auto node : u_v_path)
+            int unpack_level = partition.find_level_differing(u,v);
+            if (unpack_level == partition.number_of_levels-1) continue;  // edge is not shortcut
+            if (unpack_level != curr_level-1) continue; 
+            
+            auto unpacked_path = _unpack(u, v, unpack_level);
+            if (unpacked_path.size() > 2) 
             {
-                if (node == u)
-                    continue;
-                path.push_back(node);
+                // insert unpacked_path into path without u,v
+                path.insert (path.begin() + i+1, unpacked_path.begin() +1, unpacked_path.end()-1);
+                i += unpacked_path.size()-2;
             }
         }
     }
     return path;
+}
+
+std::vector<NodeId> CRPAlgorithm::_unpack (NodeId start, NodeId end, int level)
+{
+    // level is the utmost level where start,end in different cells
+    // thus cellId is same for start, end on level+1
+    CellId cellId = overlay->get_cell_for_node(start, level+1);
+    // fwd neighbors
+    auto neighbors_in_cell_fwd = [&](NodeId v, auto f) {
+        for (auto [to, weight] : (*g)[v])
+        {
+            // all neighbors in g that are in the same cell one level above
+            if (overlay->get_cell_for_node(to, level+1) == cellId)
+            {
+                f(to, weight);
+            }
+        }
+    };
+    // bwd neighbors
+    auto neighbors_in_cell_bwd = [&](NodeId v, auto f) {
+        for (auto [to, weight] : (reverse)[v])
+        {
+            // all neighbors in g that are in the same cell one level above
+            if (overlay->get_cell_for_node(to, level+1) == cellId)
+            {
+                f(to, weight);
+            }
+        }
+    };
+
+    // run bidijkstra
+    auto [middle, dist] =
+        bidir_dijkstra->compute_distance_target<true>(start, end, neighbors_in_cell_fwd, neighbors_in_cell_bwd);
+    auto unpacked_path = bidir_dijkstra->unpack(start, end, middle);
+    return unpacked_path;
 }
 } // namespace crp

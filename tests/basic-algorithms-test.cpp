@@ -43,8 +43,21 @@ class BidirDijkstraAlgo : public crp::CRPAlgorithmInterface
 
     std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist)
     {
-        // Not implemented yet
-        return {};
+        auto [middle, distance] = bi_dijkstra->compute_distance_target<true>(
+            start, end,
+            [&](NodeId u, auto ForEach) {
+                for (auto [v, weight] : (*g)[u])
+                {
+                    ForEach(v, weight);
+                }
+            },
+            [&](NodeId u, auto ForEach) {
+                for (auto [v, weight] : reversed[u])
+                {
+                    ForEach(v, weight);
+                }
+            });
+        return bi_dijkstra->unpack(start,end,middle);
     }
 
   private:
