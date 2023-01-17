@@ -36,3 +36,6 @@
 
 # VS-Code Metadata
 /.vscode
+
+# Data Folder
+/data/*
