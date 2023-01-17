@@ -156,8 +156,8 @@ struct CmdLineParams
     std::string data_dir;
     std::string query_dir;
     std::string weight_type;
-    bool verify_query_results;
-    bool dump_partition;
+    bool verify_query_results = false;
+    bool dump_partition = false;
 };
 
 void select_partitioner(int argc, char **argv, CmdLineParams &params)
