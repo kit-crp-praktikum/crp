@@ -32,7 +32,9 @@ Argument description:
                 be in the same folder as the queries, with name
                 <weight_type>_length.
 -p, --partitioner Which partitioner to use, currently bfs or inertial.
+
 -h, --help Show a help message like this one.
+--dump-partition Only generate the partition of the graph and dump the data on stdout.
 )";
 }
 
@@ -155,7 +157,27 @@ struct CmdLineParams
     std::string query_dir;
     std::string weight_type;
     bool verify_query_results;
+    bool dump_partition;
 };
+
+void select_partitioner(int argc, char **argv, CmdLineParams &params)
+{
+    int pos = find_argument_index(argc, argv, 'p', "partitioner");
+    std::string part = "inertial";
+    if (pos != -1 && pos != argc - 1)
+    {
+        part = argv[pos + 1];
+    }
+
+    if (part == "intertial")
+    {
+        params.algo_params.partitioner = inertial_flow_part;
+    }
+    else
+    {
+        params.algo_params.partitioner = bfs_part;
+    }
+}
 
 CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
 {
@@ -182,6 +204,15 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     params.weight_type = argv[pos + 1];
     check_input_directory_valid(params.data_dir, params.weight_type, true);
 
+    select_partitioner(argc, argv, params);
+
+    pos = find_argument_index(argc, argv, ' ', "dump-partition");
+    if (pos != -1)
+    {
+        params.dump_partition = true;
+        return params;
+    }
+
     pos = find_required_argument(argc, argv, 'q', "queries", true);
     params.query_dir = argv[pos + 1];
     check_query_directory_exists(params.query_dir);
@@ -191,23 +222,6 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     if (params.verify_query_results)
     {
         check_verification_data_exists(params.query_dir, params.weight_type);
-    }
-
-    pos = find_argument_index(argc, argv, 'p', "partitioner");
-
-    std::string part = "inertial";
-    if (pos != -1 && pos != argc - 1)
-    {
-        part = argv[pos + 1];
-    }
-
-    if (part == "intertial")
-    {
-        params.algo_params.partitioner = inertial_flow_part;
-    }
-    else
-    {
-        params.algo_params.partitioner = bfs_part;
     }
 
     params.algo_params.customizer = crp::customize_with_dijkstra;
@@ -222,6 +236,18 @@ int main(int argc, char **argv)
     std::filesystem::path dir = params.data_dir;
     crp::Graph g(dir / "first_out", dir / "head", dir / params.weight_type);
     partitioner::GeoData geo_data(dir / "latitude", dir / "longitude");
+
+    if (params.dump_partition)
+    {
+        auto mask = params.algo_params.partitioner(&g, &geo_data, params.algo_params.number_of_levels,
+                                                   params.algo_params.cells_per_level);
+        for (size_t i = 0; i < mask.mask.size(); i++)
+        {
+            std::cout << mask.mask[i] << " ";
+        }
+
+        return 0;
+    }
 
     crp::CRPAlgorithm algorithm{params.algo_params};
     const uint64_t prepare_time = get_time_debug("preparation", [&] { algorithm.prepare(&g, &geo_data); });
