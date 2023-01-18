@@ -48,7 +48,7 @@ class RecPartitioner
      * Partition graph recursively.
      * Creates bit masks for partitions.
      */
-    std::vector<NodeId> partition_rec(crp::AdjacencyList &graph, GeoData &geo_data)
+    std::vector<NodeId> partition_rec(const crp::AdjacencyList &graph, const GeoData &geo_data)
     {
         std::vector<ClusterId> masks(graph.size(), 0);
         std::vector<NodeId> map_default(graph.size());
