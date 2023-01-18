@@ -16,7 +16,7 @@
 static void print_help()
 {
     std::cout <<
-        R"(Usage: crp [-i GRAPH_DIRECTORY] [-w EDGE_WEIGHTS] [-q QUERIES_DIR] [-l LEVELS] [-c CELLS_PER_LEVEL] [-p PARTITIONER]
+        R"(Usage: crp [-i GRAPH_DIRECTORY] [-w EDGE_WEIGHTS] [-q QUERIES_DIR] [-l LEVELS] [-c CELLS_PER_LEVEL] [-p PARTITIONER] [-C CUSTOMIZER]
 
 Argument description:
 
@@ -31,7 +31,10 @@ Argument description:
                 answers are correct. The answers to the queries are assumed to
                 be in the same folder as the queries, with name
                 <weight_type>_length.
--p, --partitioner Which partitioner to use, currently bfs or inertial.
+
+-p, --partitioner Which partitioner to use, currently bfs or inertial. Default is inertial.
+-C, --customizer Which customizer to use. Default is dijkstra, can be one of:
+                     dijkstra, bf, dijkstra-rebuild, bf-rebuild, fw-rebuild
 
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
@@ -179,6 +182,42 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
     }
 }
 
+void select_customizer(int argc, char **argv, CmdLineParams &params)
+{
+    int pos = find_argument_index(argc, argv, 'C', "customizer");
+    std::string customizer = "dijkstra";
+    if (pos != -1 && pos != argc - 1)
+    {
+        customizer = argv[pos + 1];
+    }
+
+    if (customizer == "dijkstra")
+    {
+        params.algo_params.customizer = crp::customize_with_dijkstra;
+    }
+    else if (customizer == "dijkstra-rebuild")
+    {
+        params.algo_params.customizer = crp::customize_dijkstra_rebuild;
+    }
+    else if (customizer == "bf")
+    {
+        params.algo_params.customizer = crp::customize_with_bellman_ford;
+    }
+    else if (customizer == "bf-rebuild")
+    {
+        params.algo_params.customizer = crp::customize_bellman_ford_rebuild;
+    }
+    else if (customizer == "fw-rebuild")
+    {
+        params.algo_params.customizer = crp::customize_floyd_warshall_rebuild;
+    }
+    else
+    {
+        std::cout << "Unrecognized customizer: " << customizer << std::endl;
+        std::exit(-1);
+    }
+}
+
 CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
 {
     // Check for help message
@@ -224,7 +263,7 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
         check_verification_data_exists(params.query_dir, params.weight_type);
     }
 
-    params.algo_params.customizer = crp::customize_with_dijkstra;
+    select_customizer(argc, argv, params);
     return params;
 }
 
