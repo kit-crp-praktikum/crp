@@ -13,7 +13,7 @@
 #include "grid-graph.hpp"
 
 // cannot pass customizer as function in doctest
-void test_customization_on_grid_graph(int n, int customizer_nr, bool print = false)
+void test_customization_on_grid_graph(int n, auto F, bool print = false)
 {
     // n must be a power of two
     REQUIRE((n & (n - 1)) == 0);
@@ -35,19 +35,7 @@ void test_customization_on_grid_graph(int n, int customizer_nr, bool print = fal
         return rp;
     };
 
-    auto customizer = [&](crp::Graph *g, crp::OverlayStructure *overlay) {
-        crp::customize_with_dijkstra(g, overlay);
-        if (customizer_nr == 0)
-            crp::customize_with_dijkstra(g, overlay);
-        else if (customizer_nr == 1)
-            crp::customize_with_bellman_ford(g, overlay);
-        else if (customizer_nr == 2)
-            crp::customize_dijkstra_rebuild(g, overlay);
-        else if (customizer_nr == 3)
-            crp::customize_bellman_ford_rebuild(g, overlay);
-        else if (customizer_nr == 4)
-            crp::customize_floyd_warshall_rebuild(g, overlay);
-    };
+    auto customizer = [&](crp::Graph *g, crp::OverlayStructure *overlay) { F(g, overlay); };
 
     crp::CRPAlgorithmParams param = {rp.number_of_levels, rp.cells_per_level, partitioner, customizer};
     crp::CRPAlgorithm crp(param);
@@ -88,25 +76,25 @@ void test_customization_on_grid_graph(int n, int customizer_nr, bool print = fal
 
 TEST_CASE("Grid graph n=8 customize_with_dijkstra")
 {
-    test_customization_on_grid_graph(8, 0, true);
+    test_customization_on_grid_graph(8, crp::customize_with_dijkstra, true);
 };
 
 TEST_CASE("Grid graph n=8 customize_with_bellman_ford")
 {
-    test_customization_on_grid_graph(8, 1);
+    test_customization_on_grid_graph(8, crp::customize_with_bellman_ford, 1);
 };
 
 TEST_CASE("Grid graph n=8 customize_dijkstra_rebuild")
 {
-    test_customization_on_grid_graph(8, 2);
+    test_customization_on_grid_graph(8, crp::customize_dijkstra_rebuild, 2);
 };
 
 TEST_CASE("Grid graph n=8 customize_bellman_ford_rebuild")
 {
-    test_customization_on_grid_graph(8, 3);
+    test_customization_on_grid_graph(8, crp::customize_bellman_ford_rebuild, 3);
 };
 
 TEST_CASE("Grid graph n=8 customize_floyd_warshall_rebuild")
 {
-    test_customization_on_grid_graph(8, 4);
+    test_customization_on_grid_graph(8, crp::customize_floyd_warshall_rebuild, 4);
 };
