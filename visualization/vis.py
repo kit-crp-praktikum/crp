@@ -18,6 +18,7 @@ def parse_cmd():
 	argParser.add_argument("-c", "--cells",               type=int, help="number of cells per level")
 	argParser.add_argument("-s", "--sample",   default=1, type=int, help="take only every nth datapoint for faster plotting")
 	argParser.add_argument("-m", "--markersize",   default=4, type=int, help="size of the dots in the plot")
+	argParser.add_argument("-x", "--max_level",   default=10**9, type=int, help="draws level 0,..., min(levels, max_levels) - 1")
 
 	args = argParser.parse_args()
 	print("args=%s" % args)
@@ -160,7 +161,8 @@ assert(len(longitude) == len(multi_lv_partition))
 
 graph_data = GraphData(graph, graph_name, partition_at_level, longitude, latitude)
 
-for lv in range(args.levels):
-	output_name = "{}_lv_{}_c".format(graph_data.name, lv, args.cells)
+levels = min(args.levels, args.max_level)
+for lv in range(levels):
+	output_name = "{}_lv_{}_c_{}".format(graph_data.name, lv, args.cells)
 	plot_parameters = PlotParameter(output_name, args.markersize, args.sample)
 	plot_partition_and_border(graph_data, plot_parameters, lv)
