@@ -3,8 +3,8 @@
 #include "data-types.h"
 #include "datastructure/timestamped_vector.hpp"
 #include "lib/id_queue.h"
-#include <vector>
 #include <iostream>
+#include <vector>
 
 /**
  * Implementation of Bellman-Ford Algorithm.
@@ -20,11 +20,11 @@
  *      std::cout << u << " " << weight << "\n";
  *  };
  *  neighbors(0, myf);
- * 
- * 
+ *
+ *
  * auto for_all_nodes = [&](auto f) {
  *     for(NodeId v = 0; v < n; v++) {
- *          f(v);       
+ *          f(v);
  *     }
  * };
  */
@@ -35,7 +35,8 @@ class BellmanFord
     {
     }
 
-    template <bool update_parents = false> void generic_compute_distance(NodeId start, auto neighbors, auto for_all_nodes)
+    template <bool update_parents = false>
+    void generic_compute_distance(NodeId start, auto neighbors, auto for_all_nodes)
     {
         reset();
         distance[start] = 0;
@@ -43,11 +44,10 @@ class BellmanFord
         for (uint32_t i = 0; i < number_of_nodes - 1 && changed; i++)
         {
             changed = false;
-            auto relax_neighbors = [&](NodeId v) 
-            {
+            auto relax_neighbors = [&](NodeId v) {
                 auto relax_operation = [&](NodeId u, Distance weight) {
                     Distance relaxed = distance[v] + weight;
-                    if (relaxed < distance[u])
+                    if (weight < INF && relaxed < distance[u])
                     {
                         distance[u] = relaxed;
                         changed = true;
@@ -63,9 +63,8 @@ class BellmanFord
 
     template <bool update_parents = false> void compute_distance(NodeId start, auto neighbors)
     {
-        auto for_all_nodes = [&](auto f)
-        {
-            for(NodeId v = 0; v < number_of_nodes; v++)
+        auto for_all_nodes = [&](auto f) {
+            for (NodeId v = 0; v < number_of_nodes; v++)
             {
                 f(v);
             }

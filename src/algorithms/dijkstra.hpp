@@ -64,7 +64,7 @@ class Dijkstra
         progress = dist;
 
         auto relax_operation = [&](NodeId u, Distance weight) {
-            if (!visited[u])
+            if (!visited[u] && weight < INF)
             {
                 Distance relaxed = distance[v] + weight;
                 distance[u] = std::min(distance[u], relaxed);
@@ -127,7 +127,8 @@ class Dijkstra
         return parent[v];
     }
 
-    std::vector<NodeId> unpack(NodeId s, NodeId t) {
+    std::vector<NodeId> unpack(NodeId s, NodeId t)
+    {
         NodeId node = t;
         std::vector<NodeId> path;
         while (node != s)
@@ -182,7 +183,8 @@ class BidirectionalDijstkra
                 settled = bwd.step<update_parents>(bwd_neighbors);
             }
             // no overlow, since INF = MAX_INT / 2
-            if (tentative_distance > fwd.tentative_distance(settled) + bwd.tentative_distance(settled)) {
+            if (tentative_distance > fwd.tentative_distance(settled) + bwd.tentative_distance(settled))
+            {
                 tentative_distance = fwd.tentative_distance(settled) + bwd.tentative_distance(settled);
                 meeting_point = settled;
             }
@@ -201,7 +203,8 @@ class BidirectionalDijstkra
         return bwd.get_parent(v);
     }
 
-    std::vector<NodeId> unpack (NodeId s, NodeId t, NodeId meeting_point) {
+    std::vector<NodeId> unpack(NodeId s, NodeId t, NodeId meeting_point)
+    {
         std::vector<NodeId> path;
         NodeId node = meeting_point;
         while (node != s)
