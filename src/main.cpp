@@ -297,17 +297,17 @@ int main(int argc, char **argv)
     if (params.verify_query_results)
     {
         auto answers = load_vector<uint32_t>(query_dir / (params.weight_type + "_length"));
-        size_t incorrect = 0;
+        size_t correct = 0;
 
         get_time_debug("queries", [&] {
             for (size_t i = 0; i < nr_queries; i++)
             {
                 Distance answer = algorithm.query(sources[i], targets[i]);
-                incorrect += answer != answers[i];
+                correct += answer == answers[i];
             }
         });
 
-        std::cout << incorrect << " out of " << nr_queries << " queries are not correct." << std::endl;
+        std::cout << correct << " out of " << nr_queries << " queries are correct." << std::endl;
     }
     else
     {
