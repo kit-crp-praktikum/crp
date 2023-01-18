@@ -280,11 +280,8 @@ int main(int argc, char **argv)
     {
         auto mask = params.algo_params.partitioner(&g, &geo_data, params.algo_params.number_of_levels,
                                                    params.algo_params.cells_per_level);
-        for (size_t i = 0; i < mask.mask.size(); i++)
-        {
-            std::cout << mask.mask[i] << " ";
-        }
 
+        std::cout.write((char *)mask.mask.data(), sizeof(uint32_t) * mask.mask.size());
         return 0;
     }
 
