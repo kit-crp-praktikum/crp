@@ -172,7 +172,7 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
         part = argv[pos + 1];
     }
 
-    if (part == "intertial")
+    if (part == "inertial")
     {
         params.algo_params.partitioner = inertial_flow_part;
     }
