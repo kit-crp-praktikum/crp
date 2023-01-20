@@ -137,9 +137,66 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
     else
     {
         // Read partition from a file
+        std::cerr << "Using partition from file " << part << std::endl;
+        check_file_exists_or_bail(part);
         using namespace std::placeholders;
         params.algo_params.partitioner = std::bind(load_partition_from_file, part, _1, _2, _3, _4);
     }
+}
+
+static void read_customization_matrix_from_file(std::string filename, crp::Graph *g, crp::OverlayStructure *os)
+{
+    std::vector<Distance> data = load_vector<Distance>(filename);
+    size_t cur = 0;
+
+    for (crp::LevelId level = 0; level < os->get_number_of_levels(); level++)
+    {
+        for (crp::CellId cell = 0; cell < os->num_cells_in_level(level); cell++)
+        {
+            auto border_nodes = os->get_border_nodes_for_cell(level, cell);
+            for (NodeId i = 0; i < border_nodes.size(); i++)
+            {
+                for (NodeId j = 0; j < border_nodes.size(); j++)
+                {
+                    if (cur == data.size())
+                    {
+                        std::cout << "Customizer data file has incorrect size (insufficient data)!" << std::endl;
+                        std::exit(-1);
+                    }
+
+                    *os->get_distance(level, cell, i, j) = data[cur];
+                    ++cur;
+                }
+            }
+        }
+    }
+
+    if (cur != data.size())
+    {
+        std::cout << "Customizer data file has incorrect size (extra data)!" << std::endl;
+        std::exit(-1);
+    }
+}
+
+static void dump_overlay_structure(crp::OverlayStructure *os)
+{
+    std::vector<Distance> data;
+    for (crp::LevelId level = 0; level < os->get_number_of_levels(); level++)
+    {
+        for (crp::CellId cell = 0; cell < os->num_cells_in_level(level); cell++)
+        {
+            auto border_nodes = os->get_border_nodes_for_cell(level, cell);
+            for (NodeId i = 0; i < border_nodes.size(); i++)
+            {
+                for (NodeId j = 0; j < border_nodes.size(); j++)
+                {
+                    data.push_back(*os->get_distance(level, cell, i, j));
+                }
+            }
+        }
+    }
+
+    std::cout.write((char *)data.data(), sizeof(uint32_t) * data.size());
 }
 
 void select_customizer(int argc, char **argv, CmdLineParams &params)
@@ -173,8 +230,10 @@ void select_customizer(int argc, char **argv, CmdLineParams &params)
     }
     else
     {
-        std::cout << "Unrecognized customizer: " << customizer << std::endl;
-        std::exit(-1);
+        std::cerr << "Reading customizer data from file " << customizer << std::endl;
+        check_file_exists_or_bail(customizer);
+        using namespace std::placeholders;
+        params.algo_params.customizer = std::bind(read_customization_matrix_from_file, customizer, _1, _2);
     }
 }
 
@@ -212,6 +271,14 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
         return params;
     }
 
+    select_customizer(argc, argv, params);
+    pos = find_argument_index(argc, argv, ' ', "dump-customization");
+    if (pos != -1)
+    {
+        params.mode = OperationMode::CustomizeOnly;
+        return params;
+    }
+
     pos = find_required_argument(argc, argv, 'q', "queries", true);
     params.query_dir = argv[pos + 1];
     check_query_directory_exists(params.query_dir);
@@ -223,7 +290,6 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
         check_verification_data_exists(params.query_dir, params.weight_type);
     }
 
-    select_customizer(argc, argv, params);
     return params;
 }
 
@@ -236,11 +302,23 @@ int main(int argc, char **argv)
     crp::Graph g(dir / "first_out", dir / "head", dir / params.weight_type);
     partitioner::GeoData geo_data(dir / "latitude", dir / "longitude");
 
-    if (params.mode == OperationMode::PartitionOnly)
+    if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
-        auto mask = params.algo_params.partitioner(&g, &geo_data, params.algo_params.number_of_levels,
-                                                   params.algo_params.cells_per_level);
-        std::cout.write((char *)mask.mask.data(), sizeof(uint32_t) * mask.mask.size());
+        auto rp = params.algo_params.partitioner(&g, &geo_data, params.algo_params.number_of_levels,
+                                                 params.algo_params.cells_per_level);
+
+        if (params.mode == OperationMode::CustomizeOnly)
+        {
+            auto overlay = crp::OverlayStructure(&g, rp);
+            params.algo_params.customizer(&g, &overlay);
+            dump_overlay_structure(&overlay);
+        }
+        else /* if (mode == OperationMode::PartitionOnly) */
+        {
+            // Dump partition data on stdout
+            std::cout.write((char *)rp.mask.data(), sizeof(uint32_t) * rp.mask.size());
+        }
+
         return 0;
     }
 
@@ -258,6 +336,7 @@ int main(int argc, char **argv)
         auto answers = load_vector<uint32_t>(query_dir / (params.weight_type + "_length"));
         size_t correct = 0;
 
+        nr_queries /= 1000;
         get_time_debug("queries", [&] {
             for (size_t i = 0; i < nr_queries; i++)
             {
