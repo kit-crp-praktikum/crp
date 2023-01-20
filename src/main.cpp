@@ -83,14 +83,38 @@ auto bfs_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
     return partition;
 };
 
+auto load_partition_from_file = [](std::string file, crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
+                                   int nr_cells) -> crp::RecursivePartition {
+    crp::RecursivePartition partition;
+    partition.number_of_levels = nr_levels;
+    partition.cells_per_level = nr_cells;
+
+    partition.mask = load_vector<uint32_t>(file);
+    if (partition.mask.size() != (size_t)g->num_nodes())
+    {
+        std::cout << "Supplied partition has invalid size! (" << partition.mask.size() << " vs. " << g->num_nodes()
+                  << " expected)" << std::endl;
+        std::exit(-1);
+    }
+
+    return partition;
+};
+
+enum class OperationMode
+{
+    Benchmark,
+    Verify,
+    PartitionOnly,
+    CustomizeOnly,
+};
+
 struct CmdLineParams
 {
     crp::CRPAlgorithmParams algo_params;
     std::string data_dir;
     std::string query_dir;
     std::string weight_type;
-    bool verify_query_results = false;
-    bool dump_partition = false;
+    OperationMode mode;
 };
 
 void select_partitioner(int argc, char **argv, CmdLineParams &params)
@@ -106,9 +130,15 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
     {
         params.algo_params.partitioner = inertial_flow_part;
     }
-    else
+    else if (part == "bfs")
     {
         params.algo_params.partitioner = bfs_part;
+    }
+    else
+    {
+        // Read partition from a file
+        using namespace std::placeholders;
+        params.algo_params.partitioner = std::bind(load_partition_from_file, part, _1, _2, _3, _4);
     }
 }
 
@@ -178,7 +208,7 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     pos = find_argument_index(argc, argv, ' ', "dump-partition");
     if (pos != -1)
     {
-        params.dump_partition = true;
+        params.mode = OperationMode::PartitionOnly;
         return params;
     }
 
@@ -187,9 +217,9 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     check_query_directory_exists(params.query_dir);
 
     pos = find_argument_index(argc, argv, 'v', "verify");
-    params.verify_query_results = (pos != -1);
-    if (params.verify_query_results)
+    if (pos != -1)
     {
+        params.mode = OperationMode::Verify;
         check_verification_data_exists(params.query_dir, params.weight_type);
     }
 
@@ -206,7 +236,7 @@ int main(int argc, char **argv)
     crp::Graph g(dir / "first_out", dir / "head", dir / params.weight_type);
     partitioner::GeoData geo_data(dir / "latitude", dir / "longitude");
 
-    if (params.dump_partition)
+    if (params.mode == OperationMode::PartitionOnly)
     {
         auto mask = params.algo_params.partitioner(&g, &geo_data, params.algo_params.number_of_levels,
                                                    params.algo_params.cells_per_level);
@@ -223,7 +253,7 @@ int main(int argc, char **argv)
     auto targets = load_vector<uint32_t>(query_dir / "target");
 
     size_t nr_queries = sources.size();
-    if (params.verify_query_results)
+    if (params.mode == OperationMode::Verify)
     {
         auto answers = load_vector<uint32_t>(query_dir / (params.weight_type + "_length"));
         size_t correct = 0;
