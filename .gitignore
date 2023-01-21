@@ -37,8 +37,11 @@
 # Build Folder
 /build
 
+# Relases Build Folder
+/release
+
 # VS-Code Metadata
 /.vscode
 
 # Data Folder
-/data/*
+/data/

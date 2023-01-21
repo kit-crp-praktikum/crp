@@ -32,10 +32,13 @@ Argument description:
                 answers are correct. The answers to the queries are assumed to
                 be in the same folder as the queries, with name
                 <weight_type>_length.
+-o, --phantomlevels The number of phantomlevels to use in CRP.
 
 -p, --partitioner Which partitioner to use, currently bfs or inertial. Default is inertial.
 -C, --customizer Which customizer to use. Default is dijkstra, can be one of:
                      dijkstra, bf, dijkstra-rebuild, bf-rebuild, fw-rebuild
+
+-t, --threads The number of threads to use.
 
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
@@ -253,6 +256,20 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     pos = find_required_argument(argc, argv, 'l', "levels", true);
     params.algo_params.number_of_levels = parse_integer_or_bail(argv[pos + 1]);
 
+    pos = find_argument_index(argc, argv, 'o', "phantomlevels");
+    params.algo_params.number_of_phantomlevels = 0;
+    if (pos != -1)
+    {
+        params.algo_params.number_of_phantomlevels = parse_integer_or_bail(argv[pos + 1]);
+    }
+
+    pos = find_argument_index(argc, argv, 't', "threads");
+    int number_of_threads = 1;
+    if (pos != -1)
+    {
+        number_of_threads = parse_integer_or_bail(argv[pos + 1]);
+    }
+
     pos = find_required_argument(argc, argv, 'c', "cells-per-level", true);
     params.algo_params.cells_per_level = parse_integer_or_bail(argv[pos + 1]);
 
@@ -289,7 +306,6 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
         params.mode = OperationMode::Verify;
         check_verification_data_exists(params.query_dir, params.weight_type);
     }
-
     return params;
 }
 
@@ -304,13 +320,16 @@ int main(int argc, char **argv)
 
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
-        auto rp = params.algo_params.partitioner(&g, &geo_data, params.algo_params.number_of_levels,
+        int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantomlevels;
+        auto rp = params.algo_params.partitioner(&g, &geo_data, total_number_of_levels,
                                                  params.algo_params.cells_per_level);
 
         if (params.mode == OperationMode::CustomizeOnly)
         {
             auto overlay = crp::OverlayStructure(&g, rp);
             params.algo_params.customizer(&g, &overlay);
+
+            // TODO remove phantomlevels from cliques
             dump_overlay_structure(&overlay);
         }
         else /* if (mode == OperationMode::PartitionOnly) */

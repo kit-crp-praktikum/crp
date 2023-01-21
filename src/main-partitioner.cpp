@@ -39,7 +39,8 @@ int main()
             g->weights[i] = 1;
         }
     };
-    crp::CRPAlgorithmParams param = {rp.number_of_levels, rp.cells_per_level, partitioner, customizer};
+    int phantomlevels = 0;
+    crp::CRPAlgorithmParams param = {rp.number_of_levels, phantomlevels, rp.cells_per_level, partitioner, customizer};
     crp::CRPAlgorithm crp(param);
     partitioner::GeoData geo{};
     crp.prepare(&g, &geo);

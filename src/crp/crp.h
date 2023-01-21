@@ -122,6 +122,7 @@ using CustomizationFunction = std::function<void(crp::Graph *, OverlayStructure 
 struct CRPAlgorithmParams
 {
     int number_of_levels;
+    int number_of_phantomlevels;
     int cells_per_level;
     RecursivePartitionerFunction partitioner;
     CustomizationFunction customizer;

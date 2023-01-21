@@ -41,7 +41,8 @@ void test_customization_on_grid_graph(int n, auto F, bool print = false)
 
     auto customizer = [&](crp::Graph *g, crp::OverlayStructure *overlay) { F(g, overlay); };
 
-    crp::CRPAlgorithmParams param = {rp.number_of_levels, rp.cells_per_level, partitioner, customizer};
+    int phantomlevels = 0;
+    crp::CRPAlgorithmParams param = {rp.number_of_levels, phantomlevels, rp.cells_per_level, partitioner, customizer};
     crp::CRPAlgorithm crp(param);
     partitioner::GeoData geo_data{};
     crp.prepare(&g, &geo_data);
