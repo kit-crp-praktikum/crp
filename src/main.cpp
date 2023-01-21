@@ -32,7 +32,7 @@ Argument description:
                 answers are correct. The answers to the queries are assumed to
                 be in the same folder as the queries, with name
                 <weight_type>_length.
--o, --phantomlevels The number of phantomlevels to use in CRP.
+-o, --phantom_levels The number of phantom_levels to use in CRP.
 
 -p, --partitioner Which partitioner to use, currently bfs or inertial. Default is inertial.
 -C, --customizer Which customizer to use. Default is dijkstra, can be one of:
@@ -256,11 +256,11 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     pos = find_required_argument(argc, argv, 'l', "levels", true);
     params.algo_params.number_of_levels = parse_integer_or_bail(argv[pos + 1]);
 
-    pos = find_argument_index(argc, argv, 'o', "phantomlevels");
-    params.algo_params.number_of_phantomlevels = 0;
+    pos = find_argument_index(argc, argv, 'o', "phantom_levels");
+    params.algo_params.number_of_phantom_levels = 0;
     if (pos != -1)
     {
-        params.algo_params.number_of_phantomlevels = parse_integer_or_bail(argv[pos + 1]);
+        params.algo_params.number_of_phantom_levels = parse_integer_or_bail(argv[pos + 1]);
     }
 
     pos = find_argument_index(argc, argv, 't', "threads");
@@ -320,7 +320,7 @@ int main(int argc, char **argv)
 
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
-        int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantomlevels;
+        int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantom_levels;
         auto rp = params.algo_params.partitioner(&g, &geo_data, total_number_of_levels,
                                                  params.algo_params.cells_per_level);
 
@@ -329,7 +329,7 @@ int main(int argc, char **argv)
             auto overlay = crp::OverlayStructure(&g, rp);
             params.algo_params.customizer(&g, &overlay);
 
-            overlay.remove_phantomlevels(params.algo_params.number_of_phantomlevels);
+            overlay.remove_phantom_levels(params.algo_params.number_of_phantom_levels);
             dump_overlay_structure(&overlay);
         }
         else /* if (mode == OperationMode::PartitionOnly) */

@@ -88,7 +88,7 @@ struct OverlayStructure
     // Returns the number of levels in the recursive partition.
     int get_number_of_levels();
 
-    void remove_phantomlevels(int number_of_phantomlevels);
+    void remove_phantom_levels(int number_of_phantom_levels);
 
     RecursivePartition partition;
 
@@ -126,7 +126,7 @@ using CustomizationFunction = std::function<void(crp::Graph *, OverlayStructure 
 struct CRPAlgorithmParams
 {
     int number_of_levels;
-    int number_of_phantomlevels;
+    int number_of_phantom_levels;
     int cells_per_level;
     RecursivePartitionerFunction partitioner;
     CustomizationFunction customizer;
