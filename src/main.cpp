@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <omp.h>
 
 static void print_help()
 {
@@ -269,6 +270,9 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     {
         number_of_threads = parse_integer_or_bail(argv[pos + 1]);
     }
+    // Explicitly disable dynamic teams
+    omp_set_dynamic(0);     
+    omp_set_num_threads(number_of_threads);
 
     pos = find_required_argument(argc, argv, 'c', "cells-per-level", true);
     params.algo_params.cells_per_level = parse_integer_or_bail(argv[pos + 1]);
