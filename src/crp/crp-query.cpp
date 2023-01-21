@@ -11,12 +11,12 @@ namespace crp
 template <bool need_parents> std::pair<NodeId, Distance> CRPAlgorithm::_query(NodeId start, NodeId end)
 {
     const auto &search_fwd = [&](NodeId u, auto relaxOp) {
-        const int level = std::min(partition.find_level_differing(start, u), partition.find_level_differing(end, u));
+        const int level = std::min(this->overlay->partition.find_level_differing(start, u), this->overlay->partition.find_level_differing(end, u));
 
         // Iterate graph edges
         for (auto [v, dist] : (*g)[u])
         {
-            if (partition.find_level_differing(u, v) >= level)
+            if (this->overlay->partition.find_level_differing(u, v) >= level)
             {
                 relaxOp(v, dist);
             }
@@ -43,12 +43,12 @@ template <bool need_parents> std::pair<NodeId, Distance> CRPAlgorithm::_query(No
     };
 
     const auto &search_bwd = [&](NodeId u, auto relaxOp) {
-        const int level = std::min(partition.find_level_differing(start, u), partition.find_level_differing(end, u));
+        const int level = std::min(this->overlay->partition.find_level_differing(start, u), this->overlay->partition.find_level_differing(end, u));
 
         // Iterate graph edges
         for (auto [v, dist] : reverse[u])
         {
-            if (partition.find_level_differing(u, v) >= level)
+            if (this->overlay->partition.find_level_differing(u, v) >= level)
             {
                 relaxOp(v, dist);
             }
@@ -91,7 +91,7 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
     // go through all levels, top to bottom
     // if two nodes are in the same cell on the current level, and in different ones one level below,
     // unpack the shortcut / edge
-    for (int curr_level = partition.number_of_levels-1; curr_level >= 0; curr_level--) 
+    for (int curr_level = this->overlay->partition.number_of_levels-1; curr_level >= 0; curr_level--) 
     {
         for (unsigned i = 0; i < path.size() - 1; i++)
         {
@@ -99,8 +99,8 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
             NodeId u = path[i];
             NodeId v = path[i + 1];
 
-            int unpack_level = partition.find_level_differing(u,v);
-            if (unpack_level == partition.number_of_levels-1) continue;  // edge is not shortcut
+            int unpack_level = this->overlay->partition.find_level_differing(u,v);
+            if (unpack_level == this->overlay->partition.number_of_levels-1) continue;  // edge is not shortcut
             if (unpack_level != curr_level-1) continue; 
             
             auto unpacked_path = _unpack(u, v, unpack_level);

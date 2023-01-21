@@ -88,6 +88,10 @@ struct OverlayStructure
     // Returns the number of levels in the recursive partition.
     int get_number_of_levels();
 
+    void remove_phantomlevels(int number_of_phantomlevels);
+
+    RecursivePartition partition;
+
   private:
     using Clique = std::vector<std::vector<Distance>>;
 
@@ -113,7 +117,7 @@ struct OverlayStructure
     // contains all nodes in level 0 cell
     std::vector<std::vector<NodeId>> nodes_in_level_0;
 
-    RecursivePartition partition;
+    
 };
 
 // A function which runs the customization on the given graph

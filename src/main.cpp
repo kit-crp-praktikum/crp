@@ -329,7 +329,7 @@ int main(int argc, char **argv)
             auto overlay = crp::OverlayStructure(&g, rp);
             params.algo_params.customizer(&g, &overlay);
 
-            // TODO remove phantomlevels from cliques
+            overlay.remove_phantomlevels(params.algo_params.number_of_phantomlevels);
             dump_overlay_structure(&overlay);
         }
         else /* if (mode == OperationMode::PartitionOnly) */

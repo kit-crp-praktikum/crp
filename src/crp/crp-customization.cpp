@@ -10,7 +10,10 @@ namespace crp
 void CRPAlgorithm::customize()
 {
     this->reverse = g->reversed();
-    this->params.customizer(g, overlay.get());
+    // This is the overlay on the recursive partition with phantomlevels.
+    this->overlay = std::make_unique<OverlayStructure>(this->g, this->partition);
+    this->params.customizer(g, overlay.get());    
+    this->overlay->remove_phantomlevels(this->params.number_of_phantomlevels);
 }
 
 void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto compute_clique)
@@ -34,7 +37,7 @@ void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto compu
 
     // compute level i cliques from level i - 1 cliques
     for (LevelId level = 1; level < overlay->get_number_of_levels(); level++)
-    {
+    {   
         for (CellId cellId = 0; cellId < overlay->num_cells_in_level(level); cellId++)
         {
             auto neighbors_in_cell = [&](NodeId u, auto f) {

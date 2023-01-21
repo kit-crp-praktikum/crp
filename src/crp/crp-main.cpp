@@ -124,6 +124,28 @@ int OverlayStructure::get_number_of_levels()
     return partition.number_of_levels;
 }
 
+void OverlayStructure::remove_phantomlevels(int number_of_phantomlevels)
+{
+    partition.number_of_levels -= number_of_phantomlevels;
+
+    // clear bitmask of phantomlevels in overlay partition
+    for(uint32_t i = 0; i < partition.mask.size(); i++)
+    {   
+        uint32_t bits = partition.get_bits_per_level() * partition.number_of_levels;
+        uint32_t submask =  ((uint32_t)1 << bits) - 1;
+        partition.mask[i] = partition.mask[i] & submask;
+    }
+
+    // remove datastructures for phantomlevels
+    cliques.erase(cliques.begin(), cliques.begin() + number_of_phantomlevels);
+    node_id_on_level.erase(node_id_on_level.begin(), node_id_on_level.begin() + number_of_phantomlevels);
+    border_nodes.erase(border_nodes.begin(), border_nodes.begin() + number_of_phantomlevels);
+
+    // these datastructure are not needed for query
+    child_cell_ids.erase(child_cell_ids.begin(), child_cell_ids.end());
+    nodes_in_level_0.erase(nodes_in_level_0.begin(), nodes_in_level_0.end());
+}
+
 CRPAlgorithm::CRPAlgorithm(CRPAlgorithmParams params)
 {
     this->params = params;
