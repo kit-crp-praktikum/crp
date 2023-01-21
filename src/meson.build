@@ -18,9 +18,12 @@ lib_source_files = [
 
 crp_lib_includes = [project_inc_dirs, lib_includes]
 
+# Declare omp
+omp = dependency('openmp')
+
 # Declare that we want to create a library named 'crp'
 crp_library = library('crp', lib_source_files,
-    include_directories: crp_lib_includes)
+    include_directories: crp_lib_includes, dependencies: omp)
 
 # A dependency object for our library, makes it easy to use for tests and executables
 crp_dep = declare_dependency(link_with: crp_library,
