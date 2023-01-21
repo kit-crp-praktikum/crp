@@ -82,7 +82,7 @@ class InertialFlowPartitioner : public BiPartitioner
 
         for (uint32_t i = 0; i < number_of_lines; i++)
         {
-            double angle = i * ((2.0 * M_PI) / number_of_lines);
+            double angle = i * (M_PI / number_of_lines);
             sort_by_line(cos(angle), sin(angle), geo_data);
             for (uint32_t i = 0; i < n && ((double)i / n) < group_size; i++)
             {
