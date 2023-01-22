@@ -52,7 +52,7 @@ void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto init_
         compute_clique(level, cellId, neighbors_in_cell, thread_algo[tid], thread_graph[tid], thread_mapping[tid]);
     }
     cur = get_micro_time() - cur;
-    std::cout << "-> level 0 after " << 1.0 * cur / MICRO_SECS_PER_SEC << "seconds\n";
+    std::cout << "-> level 0 after " << 1.0 * cur / MICRO_SECS_PER_SEC << " seconds\n";
 
     // compute level i cliques from level i - 1 cliques
     for (LevelId level = 1; level < overlay->get_number_of_levels(); level++)
@@ -97,7 +97,7 @@ void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto init_
             compute_clique(level, cellId, neighbors_in_cell, thread_algo[tid], thread_graph[tid], thread_mapping[tid]);
         }
         cur = get_micro_time() - cur;
-        std::cout << "-> level " << level << " after " << 1.0 * cur / MICRO_SECS_PER_SEC << "seconds\n";
+        std::cout << "-> level " << level << " after " << 1.0 * cur / MICRO_SECS_PER_SEC << " seconds\n";
     }
 }
 
