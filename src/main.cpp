@@ -151,8 +151,33 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
 
 static void read_customization_matrix_from_file(std::string filename, crp::Graph *g, crp::OverlayStructure *os)
 {
-    std::vector<Distance> data = load_vector<Distance>(filename);
-    size_t cur = 0;
+    // Instead of reading the whole file at once, we read at most 1MB of data at once. This way, we avoid the
+    // problem of having to store the data both in RAM.
+
+    std::ifstream file_in(filename);
+
+    std::vector<Distance> buffer(1e6);
+    size_t pointer = 0;
+    size_t cap = 0;
+
+    const auto &next_distance_from_file = [&]() {
+        if (pointer == cap)
+        {
+            file_in.read((char *)buffer.data(), sizeof(Distance) * buffer.size());
+            cap = file_in.gcount() / sizeof(Distance);
+            pointer = 0;
+        }
+
+        if (pointer == cap)
+        {
+            std::cout << "Customizer data file has incorrect size (insufficient data)!" << std::endl;
+            std::exit(-1);
+        }
+
+        auto r = buffer[pointer];
+        pointer++;
+        return r;
+    };
 
     for (crp::LevelId level = 0; level < os->get_number_of_levels(); level++)
     {
@@ -163,20 +188,13 @@ static void read_customization_matrix_from_file(std::string filename, crp::Graph
             {
                 for (NodeId j = 0; j < border_nodes.size(); j++)
                 {
-                    if (cur == data.size())
-                    {
-                        std::cout << "Customizer data file has incorrect size (insufficient data)!" << std::endl;
-                        std::exit(-1);
-                    }
-
-                    *os->get_distance(level, cell, i, j) = data[cur];
-                    ++cur;
+                    *os->get_distance(level, cell, i, j) = next_distance_from_file();
                 }
             }
         }
     }
 
-    if (cur != data.size())
+    if (pointer != cap)
     {
         std::cout << "Customizer data file has incorrect size (extra data)!" << std::endl;
         std::exit(-1);
@@ -275,6 +293,7 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     {
         number_of_threads = parse_integer_or_bail(argv[pos + 1]);
     }
+
     // Explicitly disable dynamic teams
     omp_set_dynamic(0);
     omp_set_num_threads(number_of_threads);
