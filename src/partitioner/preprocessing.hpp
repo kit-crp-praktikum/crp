@@ -11,7 +11,7 @@ using AdjacencyList = std::vector<std::vector<std::pair<NodeId, Distance>>>;
  * directed edge in one direction -> weight 1
  * assumes node degree is small for most of the nodes
  */
-AdjacencyList make_undirected(crp::Graph &graph)
+inline AdjacencyList make_undirected(const crp::Graph &graph)
 {
     AdjacencyList new_graph(graph.num_nodes());
     auto add_edge = [&](NodeId v, NodeId w, Distance d) {

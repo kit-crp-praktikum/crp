@@ -9,6 +9,7 @@
 #include "partitioner/bipartitioner.h"
 #include "partitioner/geo-data.h"
 #include "partitioner/inertial_flow.hpp"
+#include "partitioner/preprocessing.hpp"
 #include "partitioner/rec-partitioner.h"
 #include <cstdlib>
 #include <cstring>
@@ -68,7 +69,7 @@ auto inertial_flow_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int 
     partition.number_of_levels = nr_levels;
     partition.cells_per_level = nr_cells;
 
-    auto list = g->to_list();
+    auto list = partitioner::make_undirected(g->to_list());
     partition.mask = rec.partition_rec(list, *geo_data);
     return partition;
 };
@@ -271,7 +272,7 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
         number_of_threads = parse_integer_or_bail(argv[pos + 1]);
     }
     // Explicitly disable dynamic teams
-    omp_set_dynamic(0);     
+    omp_set_dynamic(0);
     omp_set_num_threads(number_of_threads);
 
     pos = find_required_argument(argc, argv, 'c', "cells-per-level", true);
@@ -325,8 +326,8 @@ int main(int argc, char **argv)
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
         int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantom_levels;
-        auto rp = params.algo_params.partitioner(&g, &geo_data, total_number_of_levels,
-                                                 params.algo_params.cells_per_level);
+        auto rp =
+            params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);
 
         if (params.mode == OperationMode::CustomizeOnly)
         {
