@@ -4,6 +4,7 @@
 
 #include "algorithm-test.hpp"
 #include "algorithms/bellman_ford.hpp"
+#include "algorithms/bellman_ford_simd.hpp"
 #include "algorithms/dijkstra.hpp"
 #include "algorithms/floyd_warshall.hpp"
 
@@ -161,4 +162,70 @@ class FloydWarshallAlgo : public crp::CRPAlgorithmInterface
 TEST_CASE("Test Floyd-Warshall")
 {
     test_algorithm(std::make_unique<FloydWarshallAlgo>());
+}
+
+
+class BellmanFordSIMDAlgo : public crp::CRPAlgorithmInterface
+{
+  public:
+    void prepare(crp::Graph *graph, partitioner::GeoData *)
+    {
+        this->g = graph;
+        this->bf = std::make_unique<BellmanFordSIMD>(g->num_nodes());
+    }
+
+    void customize()
+    {
+        int n = g->num_nodes();
+        distance_matrix.resize(n, std::vector<Distance>(n));
+
+        auto nghr = [&](NodeId u, auto F) {
+            for (auto [v, weight] : (*g)[u])
+            {
+                F(v, weight);
+            }
+        };
+
+        auto clamp = [&](int v) {
+            return std::min(v, g->num_nodes() - 1);
+        };
+        std::array<NodeId, SIMD_LEN> start_nodes{};
+        for (int s = 0; s < g->num_nodes(); s += SIMD_LEN)
+        {
+            for(int i = 0; i < SIMD_LEN; i++)
+            {
+                start_nodes[s + i] = clamp(s + i);
+            }
+            bf->compute_distance(start_nodes, nghr);
+            for (int t = 0; t < g->num_nodes(); t++)
+            {
+                std::array<NodeId, SIMD_LEN> result = bf->tentative_distance(t);
+                for(int i = 0; i < SIMD_LEN; i++)
+                {
+                    distance_matrix[clamp(s + i)][t] = result[i];
+                }
+            }
+        }
+    }
+
+    Distance query(NodeId start, NodeId end)
+    {
+        return distance_matrix[start][end];
+    }
+
+    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist)
+    {
+        // Not implemented yet
+        return {};
+    }
+
+  private:
+    std::unique_ptr<BellmanFordSIMD> bf;
+    crp::Graph *g;
+    std::vector<std::vector<Distance>> distance_matrix;
+};
+
+TEST_CASE("Test Bellman-Ford-SIMD")
+{
+    test_algorithm(std::make_unique<BellmanFordAlgo>());
 }
