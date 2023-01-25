@@ -1,5 +1,6 @@
 
 #include "algorithms/bellman_ford.hpp"
+#include "algorithms/bellman_ford_simd.hpp"
 #include "algorithms/dijkstra.hpp"
 #include "algorithms/dinics.hpp"
 #include "algorithms/floyd_warshall.hpp"
@@ -230,6 +231,36 @@ void test_preprocessing()
     std::cout << "\npreprocessing test ok \n";
 }
 
+void test_simd_bf()
+{
+    int n = 8;
+    crp::AdjacencyList gr(n);
+    for(int i = 0; i < n - 1; i++) 
+    {
+        gr[i].push_back({i + 1, 1});
+        gr[i + 1].push_back({i, 1});
+    }
+
+    std::array<NodeId, SIMD_LEN> start = {0,1,2,3,4,5,6,7};
+    auto nghr = [&](NodeId v, auto f){
+        for(auto [u, weight] : gr[v]) {
+            f(u, weight);
+        }
+    };
+    std::cout << "\nBF with SIMD \n";
+    BellmanFordSIMD bf(n);
+    bf.compute_distance(start, nghr);
+    for(int j = 0; j < 8; j++)
+    {
+        auto dist = bf.tentative_distance(j);
+        for(int i = 0; i < SIMD_LEN; i++) 
+        {
+            std::cout << dist[i] << " ";
+        }
+        std::cout << "\n";
+    }
+}
+
 int main()
 {
     test_timestampled_v();
@@ -238,4 +269,5 @@ int main()
     test_flow2();
     test_inertial_flow();
     test_preprocessing();
+    test_simd_bf();
 }

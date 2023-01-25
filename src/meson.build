@@ -3,6 +3,8 @@
 # - CRP binary: main function and CLI interface, TBD later.
 project_inc_dirs = include_directories('.')
 
+# for simd instructions
+add_project_arguments('-march=native', language: 'cpp')
 
 # List of source files for the crp library
 lib_source_files = [
