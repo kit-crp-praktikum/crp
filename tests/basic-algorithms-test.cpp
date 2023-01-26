@@ -194,15 +194,15 @@ class BellmanFordSIMDAlgo : public crp::CRPAlgorithmInterface
         {
             for(int i = 0; i < SIMD_LEN; i++)
             {
-                start_nodes[s + i] = clamp(s + i);
+                start_nodes[i] = clamp(s + i);
             }
             bf->compute_distance(start_nodes, nghr);
             for (int t = 0; t < g->num_nodes(); t++)
             {
                 std::array<NodeId, SIMD_LEN> result = bf->tentative_distance(t);
                 for(int i = 0; i < SIMD_LEN; i++)
-                {
-                    distance_matrix[clamp(s + i)][t] = result[i];
+                {   
+                    distance_matrix[start_nodes[i]][t] = result[i];
                 }
             }
         }
@@ -227,5 +227,5 @@ class BellmanFordSIMDAlgo : public crp::CRPAlgorithmInterface
 
 TEST_CASE("Test Bellman-Ford-SIMD")
 {
-    test_algorithm(std::make_unique<BellmanFordAlgo>());
+    test_algorithm(std::make_unique<BellmanFordSIMDAlgo>());
 }

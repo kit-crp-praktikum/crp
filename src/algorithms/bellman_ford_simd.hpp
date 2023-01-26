@@ -36,6 +36,7 @@
  *     }
  * };
  */
+
 class BellmanFordSIMD
 {
   public:
@@ -63,10 +64,10 @@ class BellmanFordSIMD
                     // relax edge
                     __m256i vec_relaxed = _mm256_add_epi32(vec_v, vec_weight);
                     
-                    // perform componentwise minimum
-                    __m256i vec_min = _mm256_min_epi32(vec_u, vec_relaxed);
+                    // perform componentwise minimum for unsigned integers
+                    __m256i vec_min = _mm256_min_epu32(vec_u, vec_relaxed);
                     _mm256_storeu_si256((__m256i_u *)distance[u].data(), vec_min);
-
+                    
                     // check if atleast one entry changed
                     __m256i c = _mm256_cmpeq_epi32(vec_u, vec_min);
                     uint32_t mask = _mm256_movemask_epi8(c);
@@ -115,8 +116,7 @@ class BellmanFordSIMD
     {
         for (uint32_t i = 0; i < number_of_nodes; i++)
         {   
-            // INF - 1, otherwise. simd min does not work, probably __m256i is a signed integer 
-            std::fill(distance[i].data(), distance[i].data() + SIMD_LEN, INF - 1);
+            std::fill(distance[i].data(), distance[i].data() + SIMD_LEN, INF);
         }
     }
 

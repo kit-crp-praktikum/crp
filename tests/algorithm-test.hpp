@@ -52,7 +52,7 @@ inline void test_algorithm(std::unique_ptr<crp::CRPAlgorithmInterface> algorithm
     for (int a = 0; a < g.num_nodes(); a++)
     {
         for (int b = 0; b < g.num_nodes(); b++)
-        {
+        {   
             REQUIRE(algorithm->query(a, b) == shortest_path_dijkstra(a, b));
         }
     }
