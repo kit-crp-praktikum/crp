@@ -1,4 +1,5 @@
 #include "algorithms/bellman_ford.hpp"
+#include "algorithms/bellman_ford_simd.hpp"
 #include "algorithms/dijkstra.hpp"
 #include "algorithms/floyd_warshall.hpp"
 #include "crp.h"
@@ -300,6 +301,41 @@ void customize_floyd_warshall_rebuild(crp::Graph *g, crp::OverlayStructure *over
     auto distance = [&](FloydWarshall &algo, NodeId u, NodeId v) { return algo.get_distance(u, v); };
 
     customize_shortest_path_rebuild(g, overlay, init_algo, init_size, one_to_all, distance);
+}
+
+void customize_bf_simd_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
+{
+    auto init_algo = [&](int num_threads) {
+        return std::vector<BellmanFordSIMD>(num_threads, BellmanFordSIMD(g->num_nodes()));
+    };
+    auto compute_clique_entries = [&](LevelId level, CellId cellId, NodeId subgraph_size, auto neighbors,
+                                      auto map_to_local, auto sp_algo) {
+        const std::span<NodeId> border_nodes = overlay->get_border_nodes_for_cell(level, cellId);
+        sp_algo.set_number_of_nodes(subgraph_size);
+        for (auto it = border_nodes.begin(); it < border_nodes.end(); std::advance(it, SIMD_LEN))
+        {
+            std::array<NodeId, SIMD_LEN> start_nodes{};
+            for(int i = 0; (i < SIMD_LEN) && (it + i) != border_nodes.end(); i++)
+            {   
+                const NodeId u = *(it + i);
+                start_nodes[i] = map_to_local(u);
+            }
+            sp_algo.compute_distance(start_nodes, neighbors);
+            for (NodeId to : border_nodes)
+            {
+                const NodeId internal_to = map_to_local(to);
+                const NodeId clique_to = overlay->get_internal_id(to, level);
+                std::array<NodeId, SIMD_LEN> to_distances = sp_algo.tentative_distance(internal_to);
+                for(int i = 0; (i < SIMD_LEN) && (it + i) != border_nodes.end(); i++)
+                {   
+                    const NodeId u = *(it + i);
+                    const NodeId clique_u = overlay->get_internal_id(u, level);
+                    *overlay->get_distance(level, cellId, clique_u, clique_to) = to_distances[i];
+                }
+            }
+        }
+    };
+    customize_rebuild_graph(g, overlay, init_algo, compute_clique_entries);
 }
 
 } // namespace crp

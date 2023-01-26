@@ -38,7 +38,7 @@ Argument description:
 
 -p, --partitioner Which partitioner to use, currently bfs or inertial. Default is inertial.
 -C, --customizer Which customizer to use. Default is dijkstra, can be one of:
-                     dijkstra, bf, dijkstra-rebuild, bf-rebuild, fw-rebuild
+                     dijkstra, bf, dijkstra-rebuild, bf-rebuild, fw-rebuild, bf-simd-rebuild
 
 -t, --threads The number of threads to use.
 
@@ -233,6 +233,10 @@ void select_customizer(int argc, char **argv, CmdLineParams &params)
     {
         params.algo_params.customizer = crp::customize_floyd_warshall_rebuild;
     }
+    else if (customizer == "bf-simd-rebuild")
+    {
+        params.algo_params.customizer = crp::customize_bf_simd_rebuild;
+    }
     else
     {
         std::cerr << "Reading customizer data from file " << customizer << std::endl;
@@ -345,7 +349,6 @@ int main(int argc, char **argv)
 
         return 0;
     }
-
     crp::CRPAlgorithm algorithm{params.algo_params};
     const uint64_t prepare_time = get_time_debug("preparation", [&] { algorithm.prepare(&g, &geo_data); });
     const uint64_t customization_duration = get_time_debug("customization", [&] { algorithm.customize(); });

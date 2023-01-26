@@ -181,4 +181,7 @@ void customize_bellman_ford_rebuild(crp::Graph *g, crp::OverlayStructure *overla
 // run floyd-warshall on rebuild cell-graph
 void customize_floyd_warshall_rebuild(crp::Graph *g, crp::OverlayStructure *overlay);
 
+// run Bellman-Ford-SIMD on rebuild cell-graph
+void customize_bf_simd_rebuild(crp::Graph *g, crp::OverlayStructure *overlay);
+
 } // namespace crp
