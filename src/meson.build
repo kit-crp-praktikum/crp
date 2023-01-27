@@ -3,13 +3,11 @@
 # - CRP binary: main function and CLI interface, TBD later.
 project_inc_dirs = include_directories('.')
 
-# for simd instructions
-add_project_arguments('-march=native', language: 'cpp')
-
 # List of source files for the crp library
 lib_source_files = [
     'graph.cpp',
     'partitioner/bfs-partitioner.cpp',
+    'partitioner/kahip-wrapper.cpp',
     'partitioner/geo-data.cpp',
     'crp/crp-main.cpp',
     'crp/crp-prepare.cpp',
@@ -25,7 +23,7 @@ omp = dependency('openmp')
 
 # Declare that we want to create a library named 'crp'
 crp_library = library('crp', lib_source_files,
-    include_directories: crp_lib_includes, dependencies: omp)
+    include_directories: crp_lib_includes, dependencies: [omp, kahip])
 
 # A dependency object for our library, makes it easy to use for tests and executables
 crp_dep = declare_dependency(link_with: crp_library,

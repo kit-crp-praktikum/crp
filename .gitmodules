@@ -1,0 +1,9 @@
+[submodule "subprojects/InertialFlowCutter"]
+	path = subprojects/InertialFlowCutter
+	url = https://github.com/kit-algo/InertialFlowCutter
+[submodule "subprojects/KaHIP"]
+	path = subprojects/KaHIP
+	url = https://github.com/KaHIP/KaHIP
+[submodule "lib/kahip/KaHIP"]
+	path = lib/kahip/KaHIP
+	url = https://github.com/KaHIP/KaHIP

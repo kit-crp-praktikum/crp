@@ -9,6 +9,7 @@
 #include "partitioner/bipartitioner.h"
 #include "partitioner/geo-data.h"
 #include "partitioner/inertial_flow.hpp"
+#include "partitioner/kahip-wrapper.hpp"
 #include "partitioner/preprocessing.hpp"
 #include "partitioner/rec-partitioner.h"
 #include <cstdlib>
@@ -88,6 +89,15 @@ auto bfs_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
     return partition;
 };
 
+auto kahip_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
+                     int nr_cells) -> crp::RecursivePartition {
+    crp::RecursivePartition partition;
+    partition.number_of_levels = nr_levels;
+    partition.cells_per_level = nr_cells;
+    partition.mask = partitioner::kahip_partition_graph(g, nr_levels, nr_cells);
+    return partition;
+};
+
 auto load_partition_from_file = [](std::string file, crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
                                    int nr_cells) -> crp::RecursivePartition {
     crp::RecursivePartition partition;
@@ -138,6 +148,10 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
     else if (part == "bfs")
     {
         params.algo_params.partitioner = bfs_part;
+    }
+    else if (part == "kahip")
+    {
+        params.algo_params.partitioner = kahip_part;
     }
     else
     {
