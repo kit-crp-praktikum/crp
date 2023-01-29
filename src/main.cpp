@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <map>
 #include <omp.h>
 
 static void print_help()
@@ -83,10 +84,12 @@ auto bfs_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
     return partition;
 };
 
-auto kahip_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
-                     int nr_cells) -> crp::RecursivePartition {
+auto kahip_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels, int nr_cells,
+                     partitioner::KaHIPParameters params) -> crp::RecursivePartition {
     crp::RecursivePartition partition{nr_levels, nr_cells};
-    partition.mask = partitioner::kahip_partition_graph(g, nr_levels, nr_cells);
+    params.nr_levels = nr_levels;
+    params.nr_cells_per_level = nr_cells;
+    partition.mask = partitioner::kahip_partition_graph(g, params);
     return partition;
 };
 
@@ -121,6 +124,46 @@ struct CmdLineParams
     OperationMode mode;
 };
 
+static partitioner::KaHIPMode parse_kahip_mode(std::string value)
+{
+    static const std::map<std::string, partitioner::KaHIPMode> modes = {
+        {
+            "eco",
+            partitioner::KaHIPMode::ECO,
+        },
+        {
+            "ecosocial",
+            partitioner::KaHIPMode::ECOSOCIAL,
+        },
+        {
+            "fast",
+            partitioner::KaHIPMode::FAST,
+        },
+        {
+            "fastsocial",
+            partitioner::KaHIPMode::FASTSOCIAL,
+        },
+        {
+            "strong",
+            partitioner::KaHIPMode::STRONG,
+        },
+        {
+            "strongsocial",
+            partitioner::KaHIPMode::STRONGSOCIAL,
+        },
+    };
+
+    if (modes.count(value))
+    {
+        return modes.find(value)->second;
+    }
+    else
+    {
+        std::cerr << "Unrecognized kahip mode " << value << std::endl;
+        std::exit(-1);
+    }
+}
+
 void select_partitioner(int argc, char **argv, CmdLineParams &params)
 {
     int pos = find_argument_index(argc, argv, 'p', "partitioner");
@@ -140,7 +183,30 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
     }
     else if (part == "kahip")
     {
-        params.algo_params.partitioner = kahip_part;
+        partitioner::KaHIPParameters kahip;
+
+        int pos = find_argument_index(argc, argv, ' ', "kahip-imbalance");
+        if (pos != -1 && pos != argc - 1)
+        {
+            kahip.imbalance = parse_double_or_bail(argv[pos + 1]);
+        }
+        else
+        {
+            kahip.imbalance = 0.1;
+        }
+
+        pos = find_argument_index(argc, argv, ' ', "kahip-mode");
+        if (pos != -1 && pos != argc - 1)
+        {
+            kahip.mode = parse_kahip_mode(argv[pos + 1]);
+        }
+        else
+        {
+            kahip.mode = partitioner::KaHIPMode::ECO;
+        }
+
+        using namespace std::placeholders;
+        params.algo_params.partitioner = std::bind(kahip_part, _1, _2, _3, _4, kahip);
     }
     else
     {

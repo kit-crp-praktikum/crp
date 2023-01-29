@@ -7,7 +7,8 @@
 #include <numeric>
 
 #if !ENABLE_KAHIP
-crp::RecursivePartitionMask partitioner::kahip_partition_graph(crp::Graph *g, int nr_levels, int nr_cells_per_level)
+crp::RecursivePartitionMask partitioner::kahip_partition_graph(crp::Graph *g,
+                                                               const partitioner::KaHIPParameters &params)
 {
     std::cerr << "CRP built without KaHIP support!" << std::endl;
     std::exit(-1);
@@ -15,10 +16,10 @@ crp::RecursivePartitionMask partitioner::kahip_partition_graph(crp::Graph *g, in
 
 #else
 #include "kaHIP_interface.h"
-static void recursive_partition(partitioner::Subgraph graph, crp::RecursivePartitionMask &out_mask, int nr_levels,
-                                int nr_cells_per_level)
+static void recursive_partition(partitioner::Subgraph graph, crp::RecursivePartitionMask &out_mask,
+                                partitioner::KaHIPParameters params)
 {
-    if (nr_levels == 0)
+    if (params.nr_levels == 0)
     {
         return;
     }
@@ -26,21 +27,20 @@ static void recursive_partition(partitioner::Subgraph graph, crp::RecursiveParti
     crp::Graph g{graph.graph};
 
     int n = g.num_nodes();
-    double imbalance = 0.05;
     int edgecut = 0; // idk what this is about
 
     std::vector<int> partition(n);
+    kaffpa(&n, NULL, (int *)g.first_out.data(), NULL, (int *)g.head.data(), &params.nr_cells_per_level,
+           &params.imbalance, false, 0, (int)params.mode, &edgecut, partition.data());
 
-    kaffpa(&n, NULL, (int *)g.first_out.data(), NULL, (int *)g.head.data(), &nr_cells_per_level, &imbalance, false, 0,
-           ECO, &edgecut, partition.data());
+    int bits_per_level = 32 - __builtin_clz(params.nr_cells_per_level - 1);
 
-    int bits_per_level = 32 - __builtin_clz(nr_cells_per_level - 1);
-
-    auto subs = partitioner::generate_subgraphs(graph, partition, nr_cells_per_level);
+    --params.nr_levels;
+    auto subs = partitioner::generate_subgraphs(graph, partition, params.nr_cells_per_level);
 #pragma omp parallel for
-    for (int i = 0; i < nr_cells_per_level; i++)
+    for (int i = 0; i < params.nr_cells_per_level; i++)
     {
-        recursive_partition(subs[i], out_mask, nr_levels - 1, nr_cells_per_level);
+        recursive_partition(subs[i], out_mask, params);
         for (NodeId x = 0; x < subs[i].graph.size(); x++)
         {
             auto &mask = out_mask[subs[i].mapping[x]];
@@ -50,7 +50,7 @@ static void recursive_partition(partitioner::Subgraph graph, crp::RecursiveParti
     }
 }
 
-crp::RecursivePartitionMask partitioner::kahip_partition_graph(crp::Graph *g, int nr_levels, int nr_cells_per_level)
+crp::RecursivePartitionMask partitioner::kahip_partition_graph(crp::Graph *g, const KaHIPParameters &params)
 {
     std::vector<NodeId> mapping(g->num_nodes());
     std::iota(mapping.begin(), mapping.end(), 0u);
@@ -61,8 +61,11 @@ crp::RecursivePartitionMask partitioner::kahip_partition_graph(crp::Graph *g, in
         .geo_data = {},
     };
 
+    std::cerr << "Using kahip partitioner with imbalance=" << params.imbalance << " mode=" << (int)params.mode
+              << std::endl;
+
     crp::RecursivePartitionMask mask(g->num_nodes());
-    recursive_partition(graph, mask, nr_levels, nr_cells_per_level);
+    recursive_partition(graph, mask, params);
     return mask;
 }
 #endif

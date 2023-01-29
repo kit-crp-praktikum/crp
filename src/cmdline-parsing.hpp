@@ -16,6 +16,19 @@ inline int parse_integer_or_bail(char *param)
     return result;
 }
 
+inline double parse_double_or_bail(char *param)
+{
+    char *end;
+    double result = strtod(param, &end);
+    if (*end != '\0')
+    {
+        std::cout << "Invalid double given: \"" << param << "\"" << std::endl;
+        std::exit(-1);
+    }
+
+    return result;
+}
+
 inline void check_file_exists_or_bail(std::string file)
 {
     if (!std::filesystem::exists(file))
