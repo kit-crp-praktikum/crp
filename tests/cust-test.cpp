@@ -24,9 +24,7 @@ void test_customization_on_grid_graph(int n, auto F, bool print = false)
     crp::Graph g{generate_grid_graph(n)};
 
     // Generate simple 2-level partition
-    crp::RecursivePartition rp;
-    rp.cells_per_level = 4;
-    rp.number_of_levels = 2;
+    crp::RecursivePartition rp{2, 4};
     rp.mask.resize(g.num_nodes());
 
     rp.mask = generate_two_level_partition(n);
@@ -99,9 +97,7 @@ void test_customization_on_general_graph(int n, int m, auto F)
     auto part = partitioner::InertialFlowPartitioner{(NodeId)n, 4, 0.25};
     auto rec_part = partitioner::RecPartitioner(part, 4, 4);
 
-    crp::RecursivePartition rp;
-    rp.cells_per_level = 4;
-    rp.number_of_levels = 4;
+    crp::RecursivePartition rp{4, 4};
     rp.mask = rec_part.partition_rec(g.to_list(), geodata);
 
     crp::OverlayStructure os(&g, rp);

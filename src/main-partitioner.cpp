@@ -22,9 +22,7 @@ int main()
     crp::Graph g{generate_grid_graph(n)};
 
     // Generate simple 2-level partition
-    crp::RecursivePartition rp;
-    rp.cells_per_level = 4;
-    rp.number_of_levels = 2;
+    crp::RecursivePartition rp{2, 4};
     rp.mask.resize(g.num_nodes());
 
     dump_grid_graph_node_ids(n);
@@ -63,18 +61,6 @@ int main()
     std::cout << std::endl;
 
     crp.customize();
-
-    auto decode = [&](NodeId v) {
-        std::pair<int, int> p = {v / n, v % n};
-        return p;
-    };
-
-    auto manhatten_distance = [&](NodeId v, NodeId u) {
-        auto [i, j] = decode(v);
-        auto [x, y] = decode(u);
-        return std::abs(i - x) + std::abs(j - y);
-    };
-
     // setup done ----------------------------------------------------------
 
     Distance dist;

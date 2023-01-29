@@ -16,9 +16,7 @@ TEST_CASE("Grid graph n=8")
     dump_grid_graph_node_ids(n);
 
     // Generate simple 2-level partition
-    crp::RecursivePartition rp;
-    rp.cells_per_level = 4;
-    rp.number_of_levels = 2;
+    crp::RecursivePartition rp{2, 4};
     rp.mask = generate_two_level_partition(n);
 
     crp::OverlayStructure os(&g, rp);

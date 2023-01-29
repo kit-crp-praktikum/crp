@@ -19,9 +19,7 @@ static crp::CRPAlgorithmParams gen_params_8x8()
     params.number_of_levels = 2;
     params.cells_per_level = 4;
     params.partitioner = [](crp::Graph *g, partitioner::GeoData *geo, int nr_levels, int cells_per_level) {
-        crp::RecursivePartition rp;
-        rp.cells_per_level = cells_per_level;
-        rp.number_of_levels = nr_levels;
+        crp::RecursivePartition rp{nr_levels, cells_per_level};
         rp.mask = generate_two_level_partition(n);
         return rp;
     };

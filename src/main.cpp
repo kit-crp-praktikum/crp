@@ -66,10 +66,7 @@ auto inertial_flow_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int 
     partitioner::InertialFlowPartitioner part(g->num_nodes(), 4, 0.25);
     partitioner::RecPartitioner rec(part, nr_cells, nr_levels);
 
-    crp::RecursivePartition partition;
-    partition.number_of_levels = nr_levels;
-    partition.cells_per_level = nr_cells;
-
+    crp::RecursivePartition partition{nr_levels, nr_cells};
     auto list = partitioner::make_undirected(g->to_list());
     partition.mask = rec.partition_rec(list, *geo_data);
     return partition;
@@ -80,10 +77,7 @@ auto bfs_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
     partitioner::BfsPartitioner part;
     partitioner::RecPartitioner rec(part, nr_cells, nr_levels);
 
-    crp::RecursivePartition partition;
-    partition.number_of_levels = nr_levels;
-    partition.cells_per_level = nr_cells;
-
+    crp::RecursivePartition partition{nr_levels, nr_cells};
     auto list = g->to_list();
     partition.mask = rec.partition_rec(list, *geo_data);
     return partition;
@@ -91,19 +85,14 @@ auto bfs_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
 
 auto kahip_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
                      int nr_cells) -> crp::RecursivePartition {
-    crp::RecursivePartition partition;
-    partition.number_of_levels = nr_levels;
-    partition.cells_per_level = nr_cells;
+    crp::RecursivePartition partition{nr_levels, nr_cells};
     partition.mask = partitioner::kahip_partition_graph(g, nr_levels, nr_cells);
     return partition;
 };
 
 auto load_partition_from_file = [](std::string file, crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
                                    int nr_cells) -> crp::RecursivePartition {
-    crp::RecursivePartition partition;
-    partition.number_of_levels = nr_levels;
-    partition.cells_per_level = nr_cells;
-
+    crp::RecursivePartition partition{nr_levels, nr_cells};
     partition.mask = load_vector<uint32_t>(file);
     if (partition.mask.size() != (size_t)g->num_nodes())
     {

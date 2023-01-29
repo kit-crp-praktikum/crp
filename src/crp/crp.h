@@ -22,6 +22,14 @@ struct RecursivePartition
     int cells_per_level;
     RecursivePartitionMask mask;
 
+    RecursivePartition() = delete;
+
+    RecursivePartition(int nr_levels, int nr_cells)
+    {
+        this->number_of_levels = nr_levels;
+        this->cells_per_level = nr_cells;
+    }
+
     // Find the first level where u and v belong to different cells
     inline int find_level_differing(NodeId u, NodeId v)
     {
@@ -116,8 +124,6 @@ struct OverlayStructure
     // nodes_in_level_0[cell]
     // contains all nodes in level 0 cell
     std::vector<std::vector<NodeId>> nodes_in_level_0;
-
-    
 };
 
 // A function which runs the customization on the given graph
@@ -155,7 +161,7 @@ class CRPAlgorithm : public CRPAlgorithmInterface
 
     // Finds path between start,end nodes on given level using bidir dijkstra
     // Inside their common cell on level+1
-    std::vector<NodeId> _unpack (NodeId start, NodeId end, int level);
+    std::vector<NodeId> _unpack(NodeId start, NodeId end, int level);
 
     crp::Graph *g;
     crp::Graph reverse;

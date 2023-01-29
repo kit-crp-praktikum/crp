@@ -4,10 +4,8 @@
 namespace crp
 {
 
-OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
+OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition) : partition(std::move(_partition))
 {
-    this->partition = std::move(_partition);
-
     this->cliques.resize(partition.number_of_levels);
 
     const NodeId UNINITIALIZED_ID = g->num_nodes();
@@ -54,17 +52,17 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
             int nr_nodes = border_nodes[level][cell].size();
             cliques[level][cell] = Clique(nr_nodes, std::vector<Distance>(nr_nodes, INF));
         }
-        
+
         // compute cellId of cells contained in level - 1
         // level 0 has no child cells -> empty
-        if(level > 0)
+        if (level > 0)
         {
             const uint32_t bits_per_level = partition.get_bits_per_level();
             uint32_t bits = (partition.number_of_levels - level) * bits_per_level;
             CellId cells = partition.cells_per_level;
             CellId cells_in_level = num_cells_in_level;
             assert((cells & (cells - 1)) == 0);
-            //if cells is a power of two -> all submasks are used
+            // if cells is a power of two -> all submasks are used
             for (CellId cell = 0; cell < cells_in_level; cell++)
             {
                 for (CellId child_cell = 0; child_cell < cells; child_cell++)
@@ -73,12 +71,12 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
                     child_cell_ids[level][cell].push_back(c);
                 }
             }
-        }   
+        }
     }
 
     nodes_in_level_0.resize(num_cells_in_level);
-    for(NodeId u = 0; u < (NodeId)g->num_nodes(); u++)
-    {   
+    for (NodeId u = 0; u < (NodeId)g->num_nodes(); u++)
+    {
         CellId cell = partition.find_cell_for_node(u, 0);
         nodes_in_level_0[cell].push_back(u);
     }
@@ -129,10 +127,10 @@ void OverlayStructure::remove_phantom_levels(int number_of_phantom_levels)
     partition.number_of_levels -= number_of_phantom_levels;
 
     // clear bitmask of phantom_levels in overlay partition
-    for(uint32_t i = 0; i < partition.mask.size(); i++)
-    {   
+    for (uint32_t i = 0; i < partition.mask.size(); i++)
+    {
         uint32_t bits = partition.get_bits_per_level() * partition.number_of_levels;
-        uint32_t submask =  ((uint32_t)1 << bits) - 1;
+        uint32_t submask = ((uint32_t)1 << bits) - 1;
         partition.mask[i] = partition.mask[i] & submask;
     }
 
@@ -146,7 +144,7 @@ void OverlayStructure::remove_phantom_levels(int number_of_phantom_levels)
     nodes_in_level_0.clear();
 }
 
-CRPAlgorithm::CRPAlgorithm(CRPAlgorithmParams params)
+CRPAlgorithm::CRPAlgorithm(CRPAlgorithmParams params) : partition{params.number_of_levels, params.cells_per_level}
 {
     this->params = params;
 }
