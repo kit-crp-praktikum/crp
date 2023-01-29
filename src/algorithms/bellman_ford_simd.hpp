@@ -50,26 +50,16 @@ class BellmanFordSIMD
         init_start_nodes(start_nodes);
         bool changed = true;
 
-        // write edge weight into first entry to use it for broadcasting
-        // uncomment to use broadcast
-        // int32_t broadcast_value[] = {1,0,0,0};
-        // __m128i broadcast_register;
         for (uint32_t i = 0; i < number_of_nodes - 1 && changed; i++)
         {   
             changed = false;
             auto relax_neighbors = [&](NodeId v) {
-                // TODO test aligned loading, different loading
-                __m256i vec_v = _mm256_loadu_si256((__m256i_u *)(distance[v].data()));
+                __m256i vec_v = _mm256_loadu_si256((__m256i_u  *)(distance[v].data()));
                 auto relax_operation = [&](NodeId u, Distance w) {
                     std::array<Distance, SIMD_LEN> e_w = {w, w, w, w, w, w, w, w};
-                    // uncomment to use broadcast
-                    // broadcast_value[0] = w;
-                    // broadcast_register = _mm_loadu_si128((__m128i_u*)(broadcast_value));
-                    // __m256i vec_weight = _mm256_broadcastd_epi32(broadcast_register);
 
                     // 8x 32-bit integer into simd register
                     __m256i vec_u = _mm256_loadu_si256((__m256i_u *)(distance[u].data()));
-                    // comment this to use broadcast
                     __m256i vec_weight = _mm256_loadu_si256((__m256i_u *)(e_w.data()));
 
                     // relax edge
