@@ -20,6 +20,31 @@ void CRPAlgorithm::customize()
     this->overlay->precompute_cliquesT();
 }
 
+uint32_t largest_cell_size(crp::OverlayStructure *overlay)
+{
+    uint32_t max_size = 0;
+    // all nodes in level zero cell
+    for (CellId cellId = 0; cellId < overlay->num_cells_in_level(0); cellId++)
+    {
+        max_size = std::max(max_size, (uint32_t)overlay->get_nodes_level0(cellId).size());
+    }
+    for (LevelId level = 1; level < overlay->get_number_of_levels(); level++)
+    {
+        for (CellId cellId = 0; cellId < overlay->num_cells_in_level(level); cellId++)
+        {
+            // union of border nodes of previous level
+            uint32_t sum = 0;
+            const std::span<CellId> child_cells = overlay->get_child_cellIds(level, cellId);
+            for (CellId child_cell : child_cells)
+            {
+                sum += overlay->get_border_nodes_for_cell(level - 1, child_cell).size();
+            }
+            max_size = std::max(max_size, sum);
+        }
+    }
+    return max_size;
+}
+
 void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto init_algo, auto compute_clique)
 {
     int num_threads;
@@ -29,7 +54,9 @@ void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto init_
     }
 
     // init thread local datastructures
-    auto thread_algo = init_algo(num_threads);
+    uint32_t largest_cell = largest_cell_size(overlay);
+    std::cerr << "-> largest cell in overlay: " << largest_cell << "\n";
+    auto thread_algo = init_algo(num_threads, largest_cell);
     std::vector<crp::Graph> thread_graph(num_threads);
     std::vector<std::vector<NodeId>> thread_mapping(num_threads, std::vector<NodeId>(g->num_nodes()));
 
@@ -125,7 +152,7 @@ void customize_with_shortest_path(crp::Graph *g, crp::OverlayStructure *overlay,
 
 void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
 {
-    auto init_algo = [&](int num_threads) { return std::vector<Dijkstra>(num_threads, Dijkstra(g->num_nodes())); };
+    auto init_algo = [&](int num_threads, uint32_t) { return std::vector<Dijkstra>(num_threads, Dijkstra(g->num_nodes())); };
     auto one_to_all = [&](Dijkstra &algo, NodeId u, auto neighbors, LevelId, CellId) {
         algo.compute_distance<false>(u, neighbors);
     };
@@ -162,7 +189,7 @@ void customize_with_bellman_ford(crp::Graph *g, crp::OverlayStructure *overlay)
     };
     // we don't set bellman ford size to subgraph size, but it will probably converge earlier -> worst case 1 iteration
     // more than necessary
-    auto init_algo = [&](int num_threads) {
+    auto init_algo = [&](int num_threads, uint32_t) {
         return std::vector<BellmanFord>(num_threads, BellmanFord(g->num_nodes()));
     };
     auto one_to_all = [&](BellmanFord &algo, NodeId u, auto neighbors, LevelId level, CellId cellId) {
@@ -266,7 +293,7 @@ void customize_shortest_path_rebuild(crp::Graph *g, crp::OverlayStructure *overl
 
 void customize_dijkstra_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
 {
-    auto init_algo = [&](int num_threads) { return std::vector<Dijkstra>(num_threads, Dijkstra(g->num_nodes())); };
+    auto init_algo = [&](int num_threads, uint32_t largest_cell) { return std::vector<Dijkstra>(num_threads, Dijkstra(largest_cell)); };
     auto init_size = [&](Dijkstra, NodeId, auto) { return; };
     auto one_to_all = [&](Dijkstra &algo, NodeId u, auto neighbors) { algo.compute_distance<false>(u, neighbors); };
     auto distance = [&](Dijkstra &algo, NodeId, NodeId to) { return algo.tentative_distance(to); };
@@ -277,8 +304,8 @@ void customize_dijkstra_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
 // same code as dijkstra, additionally set subgraph size in bellman ford
 void customize_bellman_ford_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
 {
-    auto init_algo = [&](int num_threads) {
-        return std::vector<BellmanFord>(num_threads, BellmanFord(g->num_nodes()));
+    auto init_algo = [&](int num_threads, uint32_t largest_cell) {
+        return std::vector<BellmanFord>(num_threads, BellmanFord(largest_cell));
     };
     auto init_size = [&](BellmanFord &algo, NodeId subgraph_size, auto neighbors) {
         algo.set_number_of_nodes(subgraph_size);
@@ -290,9 +317,14 @@ void customize_bellman_ford_rebuild(crp::Graph *g, crp::OverlayStructure *overla
 }
 
 void customize_floyd_warshall_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
-{
-    auto init_algo = [&](int num_threads) {
-        return std::vector<FloydWarshall>(num_threads, FloydWarshall(FLOYD_WARSHALL_MAX_N));
+{   
+    auto init_algo = [&](int num_threads, uint32_t largest_cell) {
+        std::size_t size = std::min(largest_cell, (uint32_t)FLOYD_WARSHALL_MAX_N);
+        if(largest_cell > FLOYD_WARSHALL_MAX_N)
+        {
+            std::cerr << "WARNING: largest cell=" << largest_cell << " > FLOYD_WARSHALL_MAX_N=" << FLOYD_WARSHALL_MAX_N << "\n";
+        }
+        return std::vector<FloydWarshall>(num_threads, FloydWarshall(size));
     };
     auto init_size = [&](FloydWarshall &algo, NodeId subgraph_size, auto neighbors) {
         algo.set_number_of_nodes(subgraph_size);
@@ -306,8 +338,8 @@ void customize_floyd_warshall_rebuild(crp::Graph *g, crp::OverlayStructure *over
 
 void customize_bf_simd_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
 {
-    auto init_algo = [&](int num_threads) {
-        return std::vector<BellmanFordSIMD>(num_threads, BellmanFordSIMD(g->num_nodes()));
+    auto init_algo = [&](int num_threads, uint32_t largest_cell) {
+        return std::vector<BellmanFordSIMD>(num_threads, BellmanFordSIMD(largest_cell));
     };
     auto compute_clique_entries = [&](LevelId level, CellId cellId, NodeId subgraph_size, auto neighbors,
                                       auto map_to_local, auto sp_algo) {
