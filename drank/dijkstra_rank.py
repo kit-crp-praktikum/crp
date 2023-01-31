@@ -1,10 +1,12 @@
 # This is a python script for generating a Dijkstra rank plot
-# The 'times' input file contains the binary coded uint64 vector of query times
+# The 'input' contains the list of binary coded uint64 vectors of query times, which are to be compared
 # Example: For ranksize=10 the first 10 queries are Rank 0 nodes, the next 10 are Rank 1, etc.
 
 
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
+import pandas as pd
 import argparse
 
 
@@ -12,10 +14,9 @@ import argparse
 def parse_cmd():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-r', '--ranksize', default=1, type=int, help='size of each rank')
-    arg_parser.add_argument('-t', '--times', help="directory of file 'times' containing running times")
-    arg_parser.add_argument('-n', '--name', default='Dijkstra Rank', help='diagram name')
-    arg_parser.add_argument('-l', '--levels', type=int, default='0', help='number of levels')
-    arg_parser.add_argument('-c', '--cellsperlevel', type=int, default='0', help='number of cells on each level')
+    arg_parser.add_argument('-i', '--input', nargs="*", help="files containing running times to compare")
+    arg_parser.add_argument('-n', '--name', nargs="*",  help="names of results being compared")
+    arg_parser.add_argument('-d', '--diagram', default='Dijkstra Rank', help='diagram name')
 
     args = arg_parser.parse_args()
     print("args=%s" % args)
@@ -29,26 +30,31 @@ def read_binary(path, type):
     return numbers
 
 
-# read times
-def read_times(folder, type):
-    path_times = folder + "/times"
-    times = read_binary(path_times, type)
-    return times
-
-
-# create data for plot
-def create_data(all_times, rank_size):
+# create data of one file
+def create_single_dataframe(times, rank_size, name):
     data = []
-    for i in range(0, len(all_times), rank_size):
-        data.append(all_times[i:i + rank_size])
-    return data
+    for i in range(len(times)):
+        data.append([times[i], '2^' + str(i//rank_size), name])
+
+    # convert list to DataFrame
+    df = pd.DataFrame(data, columns=['time', 'rank', 'name'])
+    return df
+
+
+# create whole dataframe
+def create_dataframe(input_files, rank_size, names):
+    headers = ['time', 'rank', 'name']
+    df = pd.DataFrame(columns=headers)
+    for i in range(len(input_files)):
+        times = read_binary(input_files[i], np.uint64)
+        times_df = create_single_dataframe(times, rank_size, names[i])
+        df = pd.concat([df, times_df], axis=0)
+    return df
 
 
 # make dijkstra rank box plot
 # data contains lists of times for each rank
 def plot_dijkstra_rank(data, name):
-    rank_labels = ["2^" + str(i) for i in range(len(data))]
-
     # set plot size
     plt.figure(figsize=(16, 7))
 
@@ -56,8 +62,8 @@ def plot_dijkstra_rank(data, name):
     plt.yscale("log")
     plt.grid(which="minor", linestyle="--")
 
-    # creating plot
-    plt.boxplot(data, labels=rank_labels, patch_artist=True)
+    # create a grouped boxplot
+    sns.boxplot(x=data['rank'], y=data['time'], hue=data['name'])
 
     plt.title(name)
     plt.xlabel('Dijkstra Rank')
@@ -70,6 +76,5 @@ def plot_dijkstra_rank(data, name):
 
 # main program
 args = parse_cmd()
-all_times = read_times(args.times, np.uint64)
-data = create_data(all_times, args.ranksize)
-plot_dijkstra_rank(data, args.name)
+df = create_dataframe(args.input, args.ranksize, args.name)
+plot_dijkstra_rank(df, args.diagram)
