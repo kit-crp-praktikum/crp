@@ -28,9 +28,9 @@ int main(int argc, char **argv)
     pos = find_required_argument(argc, argv, 'n', "number-starts", true);
     int number_of_starts = parse_integer_or_bail(argv[pos + 1]);
 
-    check_input_directory_valid(root_dir, weight_type, false);
+    check_input_directory_valid(root_dir.generic_string(), weight_type, false);
 
-    crp::Graph g(root_dir / "first_out", root_dir / "head", root_dir / weight_type);
+    crp::Graph g((root_dir / "first_out").generic_string(), (root_dir / "head").generic_string(), (root_dir / weight_type).generic_string());
 
     const int n = g.num_nodes();
     const int nr_ranks = (n <= 1 ? 0 : 31 - __builtin_clz(n - 1)) + 1;
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
             ans.push_back(x);
     }
 
-    save_vector(output_dir / "source", start);
-    save_vector(output_dir / "target", end);
-    save_vector(output_dir / (weight_type + "_length"), ans);
+    save_vector((output_dir / "source").generic_string(), start);
+    save_vector((output_dir / "target").generic_string(), end);
+    save_vector((output_dir / (weight_type + "_length")).generic_string(), ans);
 }

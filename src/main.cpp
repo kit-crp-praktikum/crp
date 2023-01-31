@@ -2,6 +2,7 @@
 #include "crp/crp.h"
 #include "data-types.h"
 #include "graph.h"
+#include "path-unpacker.h"
 #include "lib/debug.h"
 #include "lib/timer.h"
 #include "lib/vector_io.h"
@@ -52,14 +53,14 @@ Argument description:
 static void check_query_directory_exists(std::string data_dir)
 {
     auto root = std::filesystem::path{data_dir};
-    check_file_exists_or_bail(root / "source");
-    check_file_exists_or_bail(root / "target");
+    check_file_exists_or_bail((root / "source").generic_string());
+    check_file_exists_or_bail((root / "target").generic_string());
 }
 
 static void check_verification_data_exists(std::string data_dir, std::string weight)
 {
     auto root = std::filesystem::path{data_dir};
-    check_file_exists_or_bail(root / (weight + "_length"));
+    check_file_exists_or_bail((root / (weight + "_length")).generic_string());
 }
 
 auto inertial_flow_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
@@ -121,7 +122,7 @@ struct CmdLineParams
     std::string data_dir;
     std::string query_dir;
     std::string weight_type;
-    OperationMode mode;
+    OperationMode mode = OperationMode::Benchmark;
 };
 
 static partitioner::KaHIPMode parse_kahip_mode(std::string value)
@@ -412,8 +413,8 @@ int main(int argc, char **argv)
 
     // Load graph
     std::filesystem::path dir = params.data_dir;
-    crp::Graph g(dir / "first_out", dir / "head", dir / params.weight_type);
-    partitioner::GeoData geo_data(dir / "latitude", dir / "longitude");
+    crp::Graph g((dir / "first_out").generic_string(), (dir / "head").generic_string(), (dir / params.weight_type).generic_string());
+    partitioner::GeoData geo_data((dir / "latitude").generic_string(), (dir / "longitude").generic_string());
 
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
@@ -442,13 +443,13 @@ int main(int argc, char **argv)
     const uint64_t customization_duration = get_time_debug("customization", [&] { algorithm.customize(); });
 
     std::filesystem::path query_dir = params.query_dir;
-    auto sources = load_vector<uint32_t>(query_dir / "source");
-    auto targets = load_vector<uint32_t>(query_dir / "target");
+    auto sources = load_vector<uint32_t>((query_dir / "source").generic_string());
+    auto targets = load_vector<uint32_t>((query_dir / "target").generic_string());
 
     size_t nr_queries = sources.size();
     if (params.mode == OperationMode::Verify)
     {
-        auto answers = load_vector<uint32_t>(query_dir / (params.weight_type + "_length"));
+        auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
         size_t correct = 0;
 
         nr_queries /= 1000;
@@ -457,6 +458,11 @@ int main(int argc, char **argv)
             {
                 Distance answer = algorithm.query(sources[i], targets[i]);
                 correct += answer == answers[i];
+                // for testing path unpacking
+                //auto query_path = algorithm.query_path(sources[i], targets[i], answer);
+                //if (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::EdgeMissing) std::cout<<"edge missing\n";
+                //else if (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::TotalLengthWrong) std::cout<<"total dist wrong\n";
+                //correct += (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::Ok);
             }
         });
 
@@ -471,6 +477,12 @@ int main(int argc, char **argv)
             for (size_t i = 0; i < nr_queries; i++)
             {
                 query_times[i] = get_time([&] { algorithm.query(sources[i], targets[i]); });
+                // for testing path unpacking
+                //Distance dist;
+                //query_times[i] = get_time([&] {  
+                //    dist = algorithm.query(sources[i], targets[i]);
+                //    algorithm.query_path(sources[i], targets[i], dist);
+                //    });
             }
         });
 
@@ -478,5 +490,8 @@ int main(int argc, char **argv)
         {
             std::cout << query_times[i] << " ";
         }
+
+        // save for dijkstra rank plot
+        //save_vector<uint64_t>((query_dir / "times_query_path").generic_string(), query_times);
     }
 }

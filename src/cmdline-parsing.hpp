@@ -41,13 +41,13 @@ inline void check_file_exists_or_bail(std::string file)
 inline void check_input_directory_valid(std::string data_dir, std::string weight, bool requires_geo_data)
 {
     auto root = std::filesystem::path{data_dir};
-    check_file_exists_or_bail(root / "first_out");
-    check_file_exists_or_bail(root / "head");
-    check_file_exists_or_bail(root / weight);
+    check_file_exists_or_bail((root / "first_out").generic_string());
+    check_file_exists_or_bail((root / "head").generic_string());
+    check_file_exists_or_bail((root / weight).generic_string());
     if (requires_geo_data)
     {
-        check_file_exists_or_bail(root / "latitude");
-        check_file_exists_or_bail(root / "longitude");
+        check_file_exists_or_bail((root / "latitude").generic_string());
+        check_file_exists_or_bail((root / "longitude").generic_string());
     }
 }
 
