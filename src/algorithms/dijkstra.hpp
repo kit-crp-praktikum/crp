@@ -4,6 +4,8 @@
 #include "src/data-types.h"
 #include "src/datastructure/timestamped_vector.hpp"
 #include <vector>
+#include <iostream>
+
 
 /**
  * Implementation of Dijkstras Algorithm.
@@ -75,12 +77,24 @@ class Dijkstra
                             parent[u] = v;
                         }
                     }
+                    #ifdef PRINT_EDGES
+                        if (relaxed < priority_queue.get_key(u))
+                        {
+                            logging.push_back(u);
+                            logging.push_back(v);
+                        }
+                    #endif
                     priority_queue.decrease_key({u, relaxed});
                 }
                 else
                 {
                     if constexpr (update_parents)
                         parent[u] = v;
+                    
+                    #ifdef PRINT_EDGES
+                        logging.push_back(u);
+                        logging.push_back(v);
+                    #endif
                     priority_queue.push({u, relaxed});
                 }
             }
@@ -138,6 +152,10 @@ class Dijkstra
         return path;
     }
 
+    // to print edges of dijkstra run
+    #ifdef PRINT_EDGES
+    std::vector<NodeId> logging;
+    #endif
   private:
     TimestampedVector<Distance> distance;
     TimestampedVector<NodeId> parent;
@@ -186,6 +204,18 @@ class BidirectionalDijstkra
             }
             steps++;
         }
+        #ifdef PRINT_EDGES
+            std::cerr << "fwd search: " << fwd.logging.size() << ", bwd search:" << bwd.logging.size() << "\n";
+            std::vector<NodeId> log;
+            log.push_back(fwd.logging.size());
+            log.push_back(bwd.logging.size());
+            log.insert(log.end(), fwd.logging.begin(), fwd.logging.end());
+            log.insert(log.end(), bwd.logging.begin(), bwd.logging.end());
+            fwd.logging.clear();
+            bwd.logging.clear();
+            std::cout.write((char *)log.data(), sizeof(uint32_t) * log.size());
+        #endif
+        
         return {meeting_point, tentative_distance};
     }
 

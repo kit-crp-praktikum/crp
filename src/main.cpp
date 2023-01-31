@@ -47,6 +47,7 @@ Argument description:
 
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
+--dump-customization Dump customization data on stdout.
 )";
 }
 
@@ -453,6 +454,10 @@ int main(int argc, char **argv)
         size_t correct = 0;
 
         nr_queries /= 1000;
+        #ifdef PRINT_EDGES
+            // we only want to have the path for one query
+            nr_queries = 1;
+        #endif
         get_time_debug("queries", [&] {
             for (size_t i = 0; i < nr_queries; i++)
             {
@@ -465,17 +470,18 @@ int main(int argc, char **argv)
                 //correct += (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::Ok);
             }
         });
-
+        #ifdef PRINT_EDGES
+            return 0;
+        #endif
         std::cout << correct << " out of " << nr_queries << " queries are correct." << std::endl;
     }
     else
     {
         std::cout << prepare_time << " " << customization_duration << std::endl;
         std::vector<uint64_t> query_times(nr_queries);
-
         get_time_debug("queries", [&] {
             for (size_t i = 0; i < nr_queries; i++)
-            {
+            {   
                 query_times[i] = get_time([&] { algorithm.query(sources[i], targets[i]); });
                 // for testing path unpacking
                 //Distance dist;
@@ -485,7 +491,6 @@ int main(int argc, char **argv)
                 //    });
             }
         });
-
         for (size_t i = 0; i < nr_queries; i++)
         {
             std::cout << query_times[i] << " ";

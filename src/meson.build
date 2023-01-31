@@ -3,6 +3,16 @@
 # - CRP binary: main function and CLI interface, TBD later.
 project_inc_dirs = include_directories('.')
 
+# for simd instructions
+add_project_arguments('-march=native', language: 'cpp')
+
+if get_option('enable_print_edges')
+  message('enable print edges')
+  add_project_arguments('-DPRINT_EDGES=1', language: 'cpp')
+else
+  message('disable print edges')
+endif
+
 # List of source files for the crp library
 lib_source_files = [
     'graph.cpp',
