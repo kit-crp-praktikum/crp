@@ -21,7 +21,7 @@ if get_option('enable_kahip')
   kahip_lib = meson.get_compiler('cpp').find_library('kahip', dirs: meson.source_root() + '/lib/kahip/KaHIP/installed/lib')
   kahip = declare_dependency(include_directories: kahip_inc, dependencies: kahip_lib)
 else
-  kahip = dependency()
+  kahip = declare_dependency()
   add_project_arguments('-DENABLE_KAHIP=0', language: 'cpp')
 endif
 
