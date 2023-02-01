@@ -82,6 +82,11 @@ struct OverlayStructure
         return &cliques[level][cell][a][b];
     }
 
+    inline Distance *get_distanceT(LevelId level, CellId cell, NodeId a, NodeId b)
+    {
+        return &cliquesT[level][cell][b][a];
+    }
+
     // Get the number of cells on a given level.
     // The cells are numbered from 0 to num_cells_in_level-1.
     int num_cells_in_level(int level);
@@ -103,12 +108,15 @@ struct OverlayStructure
 
     RecursivePartition partition;
 
+    void precompute_cliquesT();
+
   private:
     using Clique = std::vector<std::vector<Distance>>;
 
     // Store the distance between each pair of border nodes in each cell of each level.
     // Usage: cliques[level][cell]
     std::vector<std::vector<Clique>> cliques;
+    std::vector<std::vector<Clique>> cliquesT;
 
     // A list of NodeIDs for each node on each level. Used to figure out the index of a node in the matrices
     // representing cliques.

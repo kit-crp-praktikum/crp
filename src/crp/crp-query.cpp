@@ -63,7 +63,7 @@ template <bool need_parents> std::pair<NodeId, Distance> CRPAlgorithm::_query(No
                 const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(level, cellId);
                 for (NodeId vId = 0; vId < neighbors.size(); vId++)
                 {
-                    relaxOp(neighbors[vId], *overlay->get_distance(level, cellId, vId, uId));
+                    relaxOp(neighbors[vId], *overlay->get_distanceT(level, cellId, vId, uId));
                 }
             }
         }

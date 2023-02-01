@@ -144,4 +144,22 @@ CRPAlgorithm::CRPAlgorithm(CRPAlgorithmParams params) : partition{params.number_
     this->params = params;
 }
 
+void OverlayStructure::precompute_cliquesT()
+{
+    this->cliquesT = this->cliques;
+    for (LevelId level = 0; level < partition.number_of_levels; level++)
+    {
+        for (CellId cell = 0; cell < num_cells_in_level(level); cell++)
+        {
+            const NodeId n = cliques[level][cell].size();
+            for (NodeId x = 0; x < n; x++)
+            {
+                for (NodeId y = 0; y < x; y++)
+                {
+                    std::swap(cliquesT[level][cell][x][y], cliquesT[level][cell][y][x]);
+                }
+            }
+        }
+    }
+}
 } // namespace crp

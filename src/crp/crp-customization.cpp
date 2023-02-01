@@ -17,6 +17,7 @@ void CRPAlgorithm::customize()
     this->overlay = std::make_unique<OverlayStructure>(this->g, this->partition);
     this->params.customizer(g, overlay.get());
     this->overlay->remove_phantom_levels(this->params.number_of_phantom_levels);
+    this->overlay->precompute_cliquesT();
 }
 
 void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto init_algo, auto compute_clique)
@@ -315,8 +316,8 @@ void customize_bf_simd_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
         for (auto it = border_nodes.begin(); it < border_nodes.end(); std::advance(it, SIMD_LEN))
         {
             std::array<NodeId, SIMD_LEN> start_nodes{};
-            for(int i = 0; (i < SIMD_LEN) && (it + i) != border_nodes.end(); i++)
-            {   
+            for (int i = 0; (i < SIMD_LEN) && (it + i) != border_nodes.end(); i++)
+            {
                 const NodeId u = *(it + i);
                 start_nodes[i] = map_to_local(u);
             }
@@ -326,8 +327,8 @@ void customize_bf_simd_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
                 const NodeId internal_to = map_to_local(to);
                 const NodeId clique_to = overlay->get_internal_id(to, level);
                 std::array<NodeId, SIMD_LEN> to_distances = sp_algo.tentative_distance(internal_to);
-                for(int i = 0; (i < SIMD_LEN) && (it + i) != border_nodes.end(); i++)
-                {   
+                for (int i = 0; (i < SIMD_LEN) && (it + i) != border_nodes.end(); i++)
+                {
                     const NodeId u = *(it + i);
                     const NodeId clique_u = overlay->get_internal_id(u, level);
                     *overlay->get_distance(level, cellId, clique_u, clique_to) = to_distances[i];
