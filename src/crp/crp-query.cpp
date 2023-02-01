@@ -83,60 +83,90 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
     out_dist = distance;
 
     auto path = bidir_dijkstra->unpack(start, end, middle);
-
-    // go through all levels, top to bottom
-    // if two nodes are in the same cell on the current level, and in different ones one level below,
-    // unpack the shortcut / edge
-    for (int curr_level = this->overlay->partition.number_of_levels - 1; curr_level >= 0; curr_level--)
+    for (unsigned i = 0; i < path.size() - 1; i++)
     {
-        for (unsigned i = 0; i < path.size() - 1; i++)
+        // consider u-v edge (possibly shortcut)
+        NodeId u = path[i];
+        NodeId v = path[i + 1];
+
+        auto unpacked_path = _unpack(u, v);
+
+        if (unpacked_path.size() > 2)
         {
-            // consider u-v edge (possibly shortcut)
-            NodeId u = path[i];
-            NodeId v = path[i + 1];
-
-            int unpack_level = this->overlay->partition.find_level_differing(u, v);
-            if (unpack_level == this->overlay->partition.number_of_levels - 1)
-                continue; // edge is not shortcut
-            if (unpack_level != curr_level - 1)
-                continue;
-
-            auto unpacked_path = _unpack(u, v, unpack_level);
-            if (unpacked_path.size() > 2)
-            {
-                // insert unpacked_path into path without u,v
-                path.insert(path.begin() + i + 1, unpacked_path.begin() + 1, unpacked_path.end() - 1);
-                i += unpacked_path.size() - 2;
-            }
+            path.insert(path.begin() + i + 1, unpacked_path.begin() + 1, unpacked_path.end() - 1);
+            // newly unpacked edge may be shortcut as well
+            i--;
         }
     }
+
     return path;
 }
 
-std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end, int level)
+std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end)
 {
-    // level is the utmost level where start,end in different cells
-    // thus cellId is same for start, end on level+1
-    CellId cellId = overlay->get_cell_for_node(start, level + 1);
     // fwd neighbors
     auto neighbors_in_cell_fwd = [&](NodeId v, auto f) {
+        const int diff_start = partition.find_level_differing(start, v);
+        const int diff_end = partition.find_level_differing(end, v);
+        const int level = std::min(diff_start, diff_end);
+
+        // Iterate graph edges
         for (auto [to, weight] : (*g)[v])
         {
-            // all neighbors in g that are in the same cell one level above
-            if (overlay->get_cell_for_node(to, level + 1) == cellId)
+            if (partition.find_level_differing(v, to) >= level) // in different cells on 'level'
             {
                 f(to, weight);
+            }
+        }
+
+        if (level >= 0)
+        {
+            // Iterate clique
+            const CellId cellId_v = overlay->get_cell_for_node(v, level);
+            const NodeId vId = overlay->get_internal_id(v, level);
+            if (vId != g->num_nodes())
+            {
+                const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(level, cellId_v);
+                for (NodeId toId = 0; toId < neighbors.size(); toId++)
+                {
+                    if (toId != vId)
+                    {
+                        auto dist = *overlay->get_distance(level, cellId_v, vId, toId);
+                        f(neighbors[toId], dist);
+                    }
+                }
             }
         }
     };
     // bwd neighbors
     auto neighbors_in_cell_bwd = [&](NodeId v, auto f) {
+        const int level = std::min(partition.find_level_differing(start, v), partition.find_level_differing(end, v));
+
+        // Iterate graph edges
         for (auto [to, weight] : (reverse)[v])
         {
-            // all neighbors in g that are in the same cell one level above
-            if (overlay->get_cell_for_node(to, level + 1) == cellId)
+            if (partition.find_level_differing(v, to) >= level)
             {
                 f(to, weight);
+            }
+        }
+
+        if (level >= 0)
+        {
+            // Iterate clique
+            const CellId cellId_v = overlay->get_cell_for_node(v, level);
+            const NodeId vId = overlay->get_internal_id(v, level);
+            if (vId != g->num_nodes())
+            {
+                const std::span<NodeId> neighbors = overlay->get_border_nodes_for_cell(level, cellId_v);
+                for (NodeId toId = 0; toId < neighbors.size(); toId++)
+                {
+                    if (toId != vId)
+                    {
+                        auto dist = *overlay->get_distance(level, cellId_v, toId, vId);
+                        f(neighbors[toId], dist);
+                    }
+                }
             }
         }
     };

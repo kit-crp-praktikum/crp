@@ -170,9 +170,8 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     // The result is the node where forward and backward search met and the computed shortest distance.
     template <bool update_parents> std::pair<NodeId, Distance> _query(NodeId start, NodeId end);
 
-    // Finds path between start,end nodes on given level using bidir dijkstra
-    // Inside their common cell on level+1
-    std::vector<NodeId> _unpack(NodeId start, NodeId end, int level);
+    // Unpack start-end shortcut
+    std::vector<NodeId> _unpack(NodeId start, NodeId end);
 
     crp::Graph *g;
     crp::Graph reverse;
