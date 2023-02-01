@@ -40,7 +40,7 @@ struct RecursivePartition
             return -1;
         }
 
-        const uint32_t first_diff = __builtin_ctz(diff) / number_of_levels;
+        const uint32_t first_diff = __builtin_ctz(diff) / get_bits_per_level();
         return number_of_levels - first_diff - 1;
     }
 
