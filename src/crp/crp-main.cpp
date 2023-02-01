@@ -102,11 +102,6 @@ std::span<NodeId> OverlayStructure::get_nodes_level0(CellId cell)
     return nodes_in_level_0[cell];
 }
 
-Distance *OverlayStructure::get_distance(LevelId level, CellId cell, NodeId a, NodeId b)
-{
-    return &cliques[level][cell][a][b];
-}
-
 int OverlayStructure::num_cells_in_level(int level)
 {
     return border_nodes[level].size();

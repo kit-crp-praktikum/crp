@@ -77,7 +77,10 @@ struct OverlayStructure
 
     // Get a reference to the memory where the distance between border nodes a and b is stored.
     // Note that a and b are internal IDs for the given cell.
-    Distance *get_distance(LevelId level, CellId cell, NodeId a, NodeId b);
+    inline Distance *get_distance(LevelId level, CellId cell, NodeId a, NodeId b)
+    {
+        return &cliques[level][cell][a][b];
+    }
 
     // Get the number of cells on a given level.
     // The cells are numbered from 0 to num_cells_in_level-1.
