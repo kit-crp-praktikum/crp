@@ -4,6 +4,7 @@ import matplotlib.cm as cm
 import geopandas
 import pandas as pd
 from shapely import wkt
+from shapely.geometry import Point, LineString
 import sys
 import argparse
 import colorsys
@@ -19,6 +20,8 @@ def parse_cmd():
 	argParser.add_argument("-s", "--sample",   default=1, type=int, help="take only every nth datapoint for faster plotting")
 	argParser.add_argument("-m", "--markersize",   default=4, type=int, help="size of the dots in the plot")
 	argParser.add_argument("-x", "--max_level",   default=10**9, type=int, help="draws level 0,..., min(levels, max_levels) - 1")
+	argParser.add_argument("-e", "--edge_list", help="binary file of edges to visualize, format: fwd_size bwd_size (edges of fwd) (edges of bwd)")
+	argParser.add_argument("-w", "--linewidth", default=0.05, type=float, help="width of drawn edges")
 
 	args = argParser.parse_args()
 	print("args=%s" % args)
@@ -147,9 +150,41 @@ class PlotParameter:
 		self.markersize = markersize
 		self.sample = sample
 
+# longitude x, latitude y
+def draw_edges(edge_list, edge_colors, longitude, latitude, linewidth, output_name):
+	assert(len(edge_list) == 2 * len(edge_colors))
+
+	# write edge into LineString format
+	edges= list()
+	for i in range(0, len(edge_list), 2):
+		v, w = edge_list[i], edge_list[i + 1]
+		edges.append(LineString([(longitude[v], latitude[v]), (longitude[w], latitude[w])]))
+
+	# create dataframe
+	gdf = geopandas.GeoDataFrame({'Edges':edges,'Color':edge_colors }, geometry='Edges')
+
+	# create plot
+	world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
+	ax = gdf.plot(color=gdf.Color, figsize=(24, 12), linewidth=linewidth)
+	world[world.name == 'Germany'].plot(ax=ax,  facecolor="none", edgecolor='black', linewidth=2)
+	#linewidth=1
+	file_name = output_name + ".png"
+	plt.savefig(file_name)
+	print(f"--> wrote plot to {file_name}")
+
+def find_level(u, partition, number_of_levels, start, end):
+	def find_level_differing(a, b):
+	    diff = partition[a] ^ partition[b];
+	    if not '1' in str(diff):
+	    	return -1
+	    else:
+	    	first_diff = str(diff).index('1')
+	    first_diff = first_diff // number_of_levels
+	    return number_of_levels - first_diff - 1;
+	return min(find_level_differing(start, u), find_level_differing(end, u))
+
 
 args = parse_cmd()
-
 graph = read_graph(args.graph)
 graph_name = args.graph.split("/")[-1]
 longitude, latitude = read_coordinates(args.graph)
@@ -161,8 +196,23 @@ assert(len(longitude) == len(multi_lv_partition))
 
 graph_data = GraphData(graph, graph_name, partition_at_level, longitude, latitude)
 
-levels = min(args.levels, args.max_level)
-for lv in range(levels):
-	output_name = "{}_lv_{}_c_{}".format(graph_data.name, lv, args.cells)
-	plot_parameters = PlotParameter(output_name, args.markersize, args.sample)
-	plot_partition_and_border(graph_data, plot_parameters, lv)
+# visualize seach space
+if args.edge_list != None:
+	# (u, v) u <- v
+	edge_list = read_binary(args.edge_list, np.uint32)
+	num_fwd, num_bwd = edge_list[0], edge_list[1]
+	edges = edge_list[2:]
+	start = edges[1]
+	end = edges[num_fwd + 1]
+
+	edge_colors = ['red' for _ in range(num_fwd // 2)] + ['blue' for _ in range(num_bwd // 2)]
+	output_name = "query_{}_lv_{}_c_{}".format(graph_data.name, args.levels, args.cells)
+	draw_edges(edges, edge_colors, longitude, latitude, args.linewidth, output_name)
+
+# visualize partition
+else:
+	levels = min(args.levels, args.max_level)
+	for lv in range(levels):
+		output_name = "{}_lv_{}_c_{}".format(graph_data.name, lv, args.cells)
+		plot_parameters = PlotParameter(output_name, args.markersize, args.sample)
+		plot_partition_and_border(graph_data, plot_parameters, lv)
