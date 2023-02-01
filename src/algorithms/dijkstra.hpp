@@ -23,8 +23,7 @@
 class Dijkstra
 {
   public:
-    Dijkstra(std::size_t size)
-        : visited(size, false), distance(size, INF), parent(size, INF), priority_queue(size), progress(0)
+    Dijkstra(std::size_t size) : distance(size, INF), parent(size, INF), priority_queue(size), progress(0)
     {
     }
 
@@ -44,7 +43,7 @@ class Dijkstra
     {
         reset();
         init_start_node(start);
-        NodeId settled = visited.size() + 2;
+        NodeId settled = distance.size() + 2;
         while (!priority_queue.empty() && settled != target)
         {
             settled = step<update_parents>(neighbors);
@@ -59,15 +58,14 @@ class Dijkstra
         auto v = priority_queue.peek().id;
         auto dist = priority_queue.pop().key;
 
-        visited[v] = true;
         distance[v] = dist;
         progress = dist;
 
         auto relax_operation = [&](NodeId u, Distance weight) {
-            if (!visited[u] && weight < INF)
+            Distance relaxed = distance[v] + weight;
+            if (relaxed < distance[u])
             {
-                Distance relaxed = distance[v] + weight;
-                distance[u] = std::min(distance[u], relaxed);
+                distance[u] = relaxed;
                 if (priority_queue.contains_id(u))
                 {
                     if constexpr (update_parents)
@@ -93,7 +91,6 @@ class Dijkstra
 
     void reset()
     {
-        visited.reset();
         distance.reset();
         parent.reset();
         priority_queue.clear();
@@ -142,7 +139,6 @@ class Dijkstra
     }
 
   private:
-    TimestampedVector<bool> visited;
     TimestampedVector<Distance> distance;
     TimestampedVector<NodeId> parent;
     MinIDQueue priority_queue;
