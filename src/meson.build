@@ -33,3 +33,4 @@ crp_dep = declare_dependency(link_with: crp_library,
 executable('crp', 'main.cpp', dependencies: [crp_dep, omp])
 executable('crp-nora', 'main-partitioner.cpp', dependencies: crp_dep)
 executable('drank-gen', 'dijkstra-rank-generator.cpp', dependencies: crp_dep)
+executable('partition-extractor', 'partition-extractor.cpp', dependencies: crp_dep)
