@@ -19,6 +19,12 @@
  */
 namespace partitioner
 {
+
+struct InertialFlowParameters
+{
+    uint32_t number_of_lines; 
+    double group_size;
+};
 class InertialFlowPartitioner : public BiPartitioner
 {
   public:

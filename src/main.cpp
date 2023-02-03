@@ -48,8 +48,12 @@ Argument description:
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
 --dump-customization Dump customization data on stdout.
---kahip-mode sets mode of KaHyPa: eco, ecosocial, fast, fastsocial, strong, strongsocial
---kahip-imbalance imbalance allowed during partitioning with KaHyPa
+
+--iflow-lines number of lines used for Inertial Flow
+--iflow-size ratio in (0.0, 0.5) of block size of one part
+
+--kahip-mode sets mode of KaHIPa: eco, ecosocial, fast, fastsocial, strong, strongsocial
+--kahip-imbalance imbalance allowed during partitioning with KaHIPa
 )";
 }
 
@@ -67,8 +71,8 @@ static void check_verification_data_exists(std::string data_dir, std::string wei
 }
 
 auto inertial_flow_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
-                             int nr_cells) -> crp::RecursivePartition {
-    partitioner::InertialFlowPartitioner part(g->num_nodes(), 4, 0.25);
+                             int nr_cells, partitioner::InertialFlowParameters params) -> crp::RecursivePartition {
+    partitioner::InertialFlowPartitioner part(g->num_nodes(), params.number_of_lines, params.group_size);
     partitioner::RecPartitioner rec(part, nr_cells, nr_levels);
 
     crp::RecursivePartition partition{nr_levels, nr_cells};
@@ -179,7 +183,23 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
 
     if (part == "inertial")
     {
-        params.algo_params.partitioner = inertial_flow_part;
+        partitioner::InertialFlowParameters inertial;
+        inertial.number_of_lines = 4;
+        inertial.group_size = 0.25;
+
+        int pos = find_argument_index(argc, argv, ' ', "iflow-lines");
+        if (pos != -1 && pos != argc - 1)
+        {
+            inertial.number_of_lines = parse_integer_or_bail(argv[pos + 1]);
+        }
+
+        pos = find_argument_index(argc, argv, ' ', "iflow-size");
+        if (pos != -1 && pos != argc - 1)
+        {
+            inertial.group_size = parse_double_or_bail(argv[pos + 1]);
+        }
+        using namespace std::placeholders;
+        params.algo_params.partitioner = std::bind(inertial_flow_part, _1, _2, _3, _4, inertial);
     }
     else if (part == "bfs")
     {
@@ -206,7 +226,7 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
         }
         else
         {
-            kahip.mode = partitioner::KaHIPMode::ECO;
+            kahip.mode = partitioner::KaHIPMode::STRONG;
         }
 
         using namespace std::placeholders;
