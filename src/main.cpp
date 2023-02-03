@@ -433,7 +433,6 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
 int main(int argc, char **argv)
 {
     auto params = load_parameters_from_cmdline(argc, argv);
-
     // Load graph
     std::filesystem::path dir = params.data_dir;
     crp::Graph g((dir / "first_out").generic_string(), (dir / "head").generic_string(), (dir / params.weight_type).generic_string());
@@ -442,15 +441,19 @@ int main(int argc, char **argv)
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
         int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantom_levels;
-        auto rp =
-            params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);
+        crp::RecursivePartition rp(0,0);
+        auto time_partitioner = get_time([&]() {rp =
+            params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);});
+        std::cerr << "partition_time=" << time_partitioner << "\n";
 
         if (params.mode == OperationMode::CustomizeOnly)
         {
-            auto overlay = crp::OverlayStructure(&g, rp);
+            long long cur = get_micro_time();
+            crp::OverlayStructure overlay = crp::OverlayStructure(&g, rp);
             params.algo_params.customizer(&g, &overlay);
-
             overlay.remove_phantom_levels(params.algo_params.number_of_phantom_levels);
+            cur = get_micro_time() - cur;
+            std::cerr << "customizer_time=" << cur << "\n";
             dump_overlay_structure(&overlay);
         }
         else /* if (mode == OperationMode::PartitionOnly) */
