@@ -2,7 +2,6 @@
 #include "crp/crp.h"
 #include "data-types.h"
 #include "graph.h"
-#include "path-unpacker.h"
 #include "lib/debug.h"
 #include "lib/timer.h"
 #include "lib/vector_io.h"
@@ -13,6 +12,7 @@
 #include "partitioner/kahip-wrapper.hpp"
 #include "partitioner/preprocessing.hpp"
 #include "partitioner/rec-partitioner.h"
+#include "path-unpacker.h"
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -435,7 +435,8 @@ int main(int argc, char **argv)
     auto params = load_parameters_from_cmdline(argc, argv);
     // Load graph
     std::filesystem::path dir = params.data_dir;
-    crp::Graph g((dir / "first_out").generic_string(), (dir / "head").generic_string(), (dir / params.weight_type).generic_string());
+    crp::Graph g((dir / "first_out").generic_string(), (dir / "head").generic_string(),
+                 (dir / params.weight_type).generic_string());
     partitioner::GeoData geo_data((dir / "latitude").generic_string(), (dir / "longitude").generic_string());
 
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
@@ -448,13 +449,18 @@ int main(int argc, char **argv)
 
         if (params.mode == OperationMode::CustomizeOnly)
         {
-            long long cur = get_micro_time();
-            crp::OverlayStructure overlay = crp::OverlayStructure(&g, rp);
-            params.algo_params.customizer(&g, &overlay);
-            overlay.remove_phantom_levels(params.algo_params.number_of_phantom_levels);
-            cur = get_micro_time() - cur;
-            std::cerr << "customizer_time=" << cur << "\n";
-            dump_overlay_structure(&overlay);
+            std::vector<NodeId> map, revmap;
+            crp::CRPAlgorithm::reoder_nodes(g, rp, map, revmap);
+            crp::OverlayStructure *os;
+
+            auto time = get_time([&] {
+                os = new crp::OverlayStructure(&g, rp);
+                params.algo_params.customizer(&g, os);
+                os->remove_phantom_levels(params.algo_params.number_of_phantom_levels);
+            });
+
+            std::cerr << "customizer_time=" << time << "\n";
+            dump_overlay_structure(os);
         }
         else /* if (mode == OperationMode::PartitionOnly) */
         {
@@ -479,25 +485,26 @@ int main(int argc, char **argv)
         size_t correct = 0;
 
         nr_queries /= 1000;
-        #ifdef PRINT_EDGES
-            // we only want to have the path for one query
-            nr_queries = 1;
-        #endif
+#ifdef PRINT_EDGES
+        // we only want to have the path for one query
+        nr_queries = 1;
+#endif
         get_time_debug("queries", [&] {
             for (size_t i = 0; i < nr_queries; i++)
             {
                 Distance answer = algorithm.query(sources[i], targets[i]);
                 correct += answer == answers[i];
                 // for testing path unpacking
-                //auto query_path = algorithm.query_path(sources[i], targets[i], answer);
-                //if (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::EdgeMissing) std::cout<<"edge missing\n";
-                //else if (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::TotalLengthWrong) std::cout<<"total dist wrong\n";
-                //correct += (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::Ok);
+                // auto query_path = algorithm.query_path(sources[i], targets[i], answer);
+                // if (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::EdgeMissing)
+                // std::cout<<"edge missing\n"; else if (crp::isPathCorrect(&query_path, &g, answer) ==
+                // crp::PathUnpackingResult::TotalLengthWrong) std::cout<<"total dist wrong\n"; correct +=
+                // (crp::isPathCorrect(&query_path, &g, answer) == crp::PathUnpackingResult::Ok);
             }
         });
-        #ifdef PRINT_EDGES
-            return 0;
-        #endif
+#ifdef PRINT_EDGES
+        return 0;
+#endif
         std::cout << correct << " out of " << nr_queries << " queries are correct." << std::endl;
     }
     else
@@ -506,11 +513,11 @@ int main(int argc, char **argv)
         std::vector<uint64_t> query_times(nr_queries);
         get_time_debug("queries", [&] {
             for (size_t i = 0; i < nr_queries; i++)
-            {   
+            {
                 query_times[i] = get_time([&] { algorithm.query(sources[i], targets[i]); });
                 // for testing path unpacking
-                //Distance dist;
-                //query_times[i] = get_time([&] {  
+                // Distance dist;
+                // query_times[i] = get_time([&] {
                 //    dist = algorithm.query(sources[i], targets[i]);
                 //    algorithm.query_path(sources[i], targets[i], dist);
                 //    });
@@ -522,6 +529,6 @@ int main(int argc, char **argv)
         }
 
         // save for dijkstra rank plot
-        //save_vector<uint64_t>((query_dir / "times_query_path").generic_string(), query_times);
+        // save_vector<uint64_t>((query_dir / "times_query_path").generic_string(), query_times);
     }
 }

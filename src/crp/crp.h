@@ -163,6 +163,15 @@ class CRPAlgorithm : public CRPAlgorithmInterface
   public:
     CRPAlgorithm(CRPAlgorithmParams params);
 
+    // Reorder the nodes in the given graph so that the border nodes from the higher levels have the smallest
+    // ID. @partition is also updated to reflect the new order.
+    //
+    // @param node_mapping After the operation, the vector contains a map from the original graph node ID to
+    //   the reordered ID.
+    // @param node_inverse_mapping The inverse of @node_mapping.
+    static void reoder_nodes(crp::Graph &g, RecursivePartition &partition, std::vector<NodeId> &node_mapping,
+                             std::vector<NodeId> &inverse_mapping);
+
   private:
     CRPAlgorithmParams params;
 
@@ -174,10 +183,15 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     std::vector<NodeId> _unpack(NodeId start, NodeId end);
 
     crp::Graph *g;
-    crp::Graph reverse;
+    crp::Graph fwd_remapped;
+    crp::Graph bwd_remapped;
     RecursivePartition partition;
     std::unique_ptr<OverlayStructure> overlay;
     std::unique_ptr<BidirectionalDijstkra> bidir_dijkstra;
+
+    // A map from the original graph to the remapped node IDs and the reverse.
+    // Used for the queries.
+    std::vector<NodeId> node_mapping, node_inverse_mapping;
 };
 
 // customization variants

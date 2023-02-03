@@ -15,7 +15,7 @@ template <bool need_parents> std::pair<NodeId, Distance> CRPAlgorithm::_query(No
                                    this->overlay->partition.find_level_differing(end, u));
 
         // Iterate graph edges
-        for (auto [v, dist] : (*g)[u])
+        for (auto [v, dist] : fwd_remapped[u])
         {
             if (this->overlay->partition.find_level_differing(u, v) >= level)
             {
@@ -45,7 +45,7 @@ template <bool need_parents> std::pair<NodeId, Distance> CRPAlgorithm::_query(No
                                    this->overlay->partition.find_level_differing(end, u));
 
         // Iterate graph edges
-        for (auto [v, dist] : reverse[u])
+        for (auto [v, dist] : bwd_remapped[u])
         {
             if (this->overlay->partition.find_level_differing(u, v) >= level)
             {
@@ -74,11 +74,16 @@ template <bool need_parents> std::pair<NodeId, Distance> CRPAlgorithm::_query(No
 
 Distance CRPAlgorithm::query(NodeId start, NodeId end)
 {
+    start = node_mapping[start];
+    end = node_mapping[end];
     return _query<false>(start, end).second;
 }
 
 std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance &out_dist)
 {
+    start = node_mapping[start];
+    end = node_mapping[end];
+
     auto [middle, distance] = _query<true>(start, end);
     out_dist = distance;
 
@@ -99,6 +104,11 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
         }
     }
 
+    for (auto &x : path)
+    {
+        x = node_inverse_mapping[x];
+    }
+
     return path;
 }
 
@@ -111,7 +121,7 @@ std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end)
         const int level = std::min(diff_start, diff_end);
 
         // Iterate graph edges
-        for (auto [to, weight] : (*g)[v])
+        for (auto [to, weight] : fwd_remapped[v])
         {
             if (partition.find_level_differing(v, to) >= level) // in different cells on 'level'
             {
@@ -143,7 +153,7 @@ std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end)
         const int level = std::min(partition.find_level_differing(start, v), partition.find_level_differing(end, v));
 
         // Iterate graph edges
-        for (auto [to, weight] : (reverse)[v])
+        for (auto [to, weight] : bwd_remapped[v])
         {
             if (partition.find_level_differing(v, to) >= level)
             {

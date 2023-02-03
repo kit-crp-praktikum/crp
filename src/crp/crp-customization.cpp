@@ -3,19 +3,69 @@
 #include "algorithms/dijkstra.hpp"
 #include "algorithms/floyd_warshall.hpp"
 #include "crp.h"
+#include "graph.h"
 #include "lib/timer.h"
 
 #include <iostream>
+#include <numeric>
 #include <omp.h>
 
 namespace crp
 {
+
+void CRPAlgorithm::reoder_nodes(crp::Graph &g, RecursivePartition &partition, std::vector<NodeId> &node_mapping,
+                                std::vector<NodeId> &node_inverse_mapping)
+{
+    node_inverse_mapping.resize(g.num_nodes());
+    std::iota(node_inverse_mapping.begin(), node_inverse_mapping.end(), 0);
+
+    std::vector<int> border_for(g.num_nodes(), 0);
+    for (NodeId i = 0; i < (NodeId)g.num_nodes(); i++)
+    {
+        for (auto [j, w] : g[i])
+        {
+            border_for[i] = std::max(border_for[i], partition.find_level_differing(i, j));
+            border_for[j] = std::max(border_for[j], partition.find_level_differing(i, j));
+        }
+    }
+
+    std::stable_sort(node_inverse_mapping.begin(), node_inverse_mapping.end(),
+                     [&](NodeId a, NodeId b) { return border_for[a] > border_for[b]; });
+
+    node_mapping.resize(g.num_nodes());
+    for (NodeId i = 0; i < (NodeId)g.num_nodes(); i++)
+    {
+        node_mapping[node_inverse_mapping[i]] = i;
+    }
+
+    // Remap graph and partition
+
+    crp::AdjacencyList fwd_list(g.num_nodes());
+    RecursivePartitionMask remapped_mask(g.num_nodes());
+
+    for (NodeId i = 0; i < (NodeId)g.num_nodes(); i++)
+    {
+        remapped_mask[node_mapping[i]] = partition.mask[i];
+        for (auto [j, w] : g[i])
+        {
+            fwd_list[node_mapping[i]].push_back({node_mapping[j], w});
+        }
+    }
+
+    g = crp::Graph{fwd_list};
+    partition.mask = remapped_mask;
+}
+
 void CRPAlgorithm::customize()
 {
-    this->reverse = g->reversed();
+    // Copy the original graph
+    this->fwd_remapped = *g;
+    CRPAlgorithm::reoder_nodes(fwd_remapped, partition, node_mapping, node_inverse_mapping);
+    this->bwd_remapped = fwd_remapped.reversed();
+
     // This is the overlay on the recursive partition with phantom_levels.
-    this->overlay = std::make_unique<OverlayStructure>(this->g, this->partition);
-    this->params.customizer(g, overlay.get());
+    this->overlay = std::make_unique<OverlayStructure>(&this->fwd_remapped, this->partition);
+    this->params.customizer(&this->fwd_remapped, overlay.get());
     this->overlay->remove_phantom_levels(this->params.number_of_phantom_levels);
     this->overlay->precompute_cliquesT();
 }
@@ -152,7 +202,9 @@ void customize_with_shortest_path(crp::Graph *g, crp::OverlayStructure *overlay,
 
 void customize_with_dijkstra(crp::Graph *g, crp::OverlayStructure *overlay)
 {
-    auto init_algo = [&](int num_threads, uint32_t) { return std::vector<Dijkstra>(num_threads, Dijkstra(g->num_nodes())); };
+    auto init_algo = [&](int num_threads, uint32_t) {
+        return std::vector<Dijkstra>(num_threads, Dijkstra(g->num_nodes()));
+    };
     auto one_to_all = [&](Dijkstra &algo, NodeId u, auto neighbors, LevelId, CellId) {
         algo.compute_distance<false>(u, neighbors);
     };
@@ -293,7 +345,9 @@ void customize_shortest_path_rebuild(crp::Graph *g, crp::OverlayStructure *overl
 
 void customize_dijkstra_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
 {
-    auto init_algo = [&](int num_threads, uint32_t largest_cell) { return std::vector<Dijkstra>(num_threads, Dijkstra(largest_cell)); };
+    auto init_algo = [&](int num_threads, uint32_t largest_cell) {
+        return std::vector<Dijkstra>(num_threads, Dijkstra(largest_cell));
+    };
     auto init_size = [&](Dijkstra, NodeId, auto) { return; };
     auto one_to_all = [&](Dijkstra &algo, NodeId u, auto neighbors) { algo.compute_distance<false>(u, neighbors); };
     auto distance = [&](Dijkstra &algo, NodeId, NodeId to) { return algo.tentative_distance(to); };
@@ -317,12 +371,13 @@ void customize_bellman_ford_rebuild(crp::Graph *g, crp::OverlayStructure *overla
 }
 
 void customize_floyd_warshall_rebuild(crp::Graph *g, crp::OverlayStructure *overlay)
-{   
+{
     auto init_algo = [&](int num_threads, uint32_t largest_cell) {
         std::size_t size = std::min(largest_cell, (uint32_t)FLOYD_WARSHALL_MAX_N);
-        if(largest_cell > FLOYD_WARSHALL_MAX_N)
+        if (largest_cell > FLOYD_WARSHALL_MAX_N)
         {
-            std::cerr << "WARNING: largest cell=" << largest_cell << " > FLOYD_WARSHALL_MAX_N=" << FLOYD_WARSHALL_MAX_N << "\n";
+            std::cerr << "WARNING: largest cell=" << largest_cell << " > FLOYD_WARSHALL_MAX_N=" << FLOYD_WARSHALL_MAX_N
+                      << "\n";
         }
         return std::vector<FloydWarshall>(num_threads, FloydWarshall(size));
     };
