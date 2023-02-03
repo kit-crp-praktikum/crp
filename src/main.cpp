@@ -48,6 +48,8 @@ Argument description:
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
 --dump-customization Dump customization data on stdout.
+--kahip-mode sets mode of KaHyPa: eco, ecosocial, fast, fastsocial, strong, strongsocial
+--kahip-imbalance imbalance allowed during partitioning with KaHyPa
 )";
 }
 
