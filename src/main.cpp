@@ -459,7 +459,7 @@ int main(int argc, char **argv)
         if (params.mode == OperationMode::CustomizeOnly)
         {
             std::vector<NodeId> map, revmap;
-            crp::CRPAlgorithm::reoder_nodes(g, rp, map, revmap);
+            get_time_debug("node reordering", [&] { crp::CRPAlgorithm::reoder_nodes(g, rp, map, revmap); });
             crp::OverlayStructure *os;
 
             auto time = get_time([&] {
