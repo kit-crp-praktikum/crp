@@ -182,6 +182,9 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     // Unpack start-end shortcut
     std::vector<NodeId> _unpack(NodeId start, NodeId end);
 
+    auto get_fwd_scan(const NodeId &start, const NodeId &end);
+    auto get_bwd_scan(const NodeId &start, const NodeId &end);
+
     crp::Graph *g;
     crp::Graph fwd_remapped;
     crp::Graph bwd_remapped;
