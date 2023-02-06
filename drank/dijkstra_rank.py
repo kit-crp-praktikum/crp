@@ -2,6 +2,9 @@
 # The 'input' contains the list of binary coded uint64 vectors of query times, which are to be compared
 # Example: For ranksize=10 the first 10 queries are Rank 0 nodes, the next 10 are Rank 1, etc.
 
+# Example run configs:
+# dijkstra_rank.py -r 10 -i {folder_path}/times_query {folder_path}/times_query_path -n query query_path
+
 
 import matplotlib.pyplot as plt
 import numpy as np
