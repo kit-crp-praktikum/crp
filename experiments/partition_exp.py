@@ -1,4 +1,4 @@
-import sys, os, argparse
+import sys, os, argparse, math
 from itertools import product
 
 # command line interface
@@ -19,6 +19,7 @@ def parse_cmd():
     arg_parser.add_argument('--kahip-mode',      nargs="*",                   default=["strong"],           required=False,       help="list KaHIP modes: eco, ecosocial, fast, fastsocial, strong, strongsocial")
     arg_parser.add_argument('--iflow-size',      nargs="*", type=float,       default=[0.25],            required=False,       help="list of inertial flow ratios")
     arg_parser.add_argument('--iflow-lines',     nargs="*", type=int,         default=[4],              required=False,       help="list of inertial flow number of lines")
+    arg_parser.add_argument('-M', '--max_level', type=bool,         default=False,              required=False,       help="for each cell size use maximal level")
 
     args = arg_parser.parse_args()
     print("args=%s" % args, file=sys.stderr)
@@ -126,17 +127,42 @@ def partition_kahip(args, lines, list_configs):
         list_configs.append(config)
 
 
+def max_level(n, c):
+	return math.floor(math.log(n) / math.log(c))
+
+def max_level_partition_kahip(args, lines, list_configs):
+    for gr, w, mode, e, t, c in product(args.graphs, args.metric, args.kahip_mode, args.kahip_imbalance, args.threads, args.cells):
+        lv = max_level(get_num_nodes(gr) / args.min_cellsize, c)
+        if lv <= 0:
+            continue
+        part_name = partition_name_kahip(gr, w, mode, e, lv, c)
+        line = shared_param(args.ex, gr, w, t, lv, c) + f" -p kahip --kahip-imbalance {e} --kahip-mode {mode} --dump-partition > {args.out}/{part_name}"
+        lines.append(line)
+        config = shared_config(1, gr, w, t, lv, c) 
+        config["partitioner"] = "kahip"
+        config["kahip_mode"] = mode
+        config["kahip_imbalance"] = e
+        list_configs.append(config)
+
+
+
 def partition_run(args):
     global temp_time, temp_config
     lines = list()
     list_configs = list()
     # generate commandline arguments for crp
-    if "bfs" in args.partitioner:
-        partition_bfs(args, lines, list_configs)
-    if "inertial" in args.partitioner:
-        partition_inertial(args, lines, list_configs)
-    if "kahip" in args.partitioner:
-        partition_kahip(args, lines, list_configs)
+    if args.max_level:
+        if "kahip" in args.partitioner:
+            max_level_partition_kahip(args, lines, list_configs)
+
+    else:
+        if "bfs" in args.partitioner:
+            partition_bfs(args, lines, list_configs)
+        if "inertial" in args.partitioner:
+            partition_inertial(args, lines, list_configs)
+        if "kahip" in args.partitioner:
+            partition_kahip(args, lines, list_configs)
+
     save_partition_time(args, lines, temp_time)
     print_dataframe(list_configs, temp_config, config_param)
 
