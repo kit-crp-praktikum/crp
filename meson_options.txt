@@ -1,2 +1,3 @@
 option('enable_kahip', type: 'boolean', value: false, description: 'Enable usage of KaHIP and FlowCutter partitioners')
+option('enable_tests', type: 'boolean', value: true, description: 'Enable unit tests with doctest')
 option('enable_print_edges', type : 'boolean', value: false)

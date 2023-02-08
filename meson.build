@@ -26,6 +26,9 @@ else
 endif
 
 subdir('src')
-subdir('tests')
+
+if get_option('enable_tests')
+  subdir('tests')
+endif
 
 executable('sp', 'src/main_sp.cpp', dependencies: crp_dep)
