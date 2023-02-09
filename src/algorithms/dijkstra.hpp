@@ -3,9 +3,8 @@
 #include "lib/id_queue.h"
 #include "src/data-types.h"
 #include "src/datastructure/timestamped_vector.hpp"
-#include <vector>
 #include <iostream>
-
+#include <vector>
 
 /**
  * Implementation of Dijkstras Algorithm.
@@ -77,24 +76,24 @@ class Dijkstra
                             parent[u] = v;
                         }
                     }
-                    #ifdef PRINT_EDGES
-                        if (relaxed < priority_queue.get_key(u))
-                        {
-                            logging.push_back(u);
-                            logging.push_back(v);
-                        }
-                    #endif
+#ifdef PRINT_EDGES
+                    if (relaxed < priority_queue.get_key(u))
+                    {
+                        logging.push_back(u);
+                        logging.push_back(v);
+                    }
+#endif
                     priority_queue.decrease_key({u, relaxed});
                 }
                 else
                 {
                     if constexpr (update_parents)
                         parent[u] = v;
-                    
-                    #ifdef PRINT_EDGES
-                        logging.push_back(u);
-                        logging.push_back(v);
-                    #endif
+
+#ifdef PRINT_EDGES
+                    logging.push_back(u);
+                    logging.push_back(v);
+#endif
                     priority_queue.push({u, relaxed});
                 }
             }
@@ -152,10 +151,10 @@ class Dijkstra
         return path;
     }
 
-    // to print edges of dijkstra run
-    #ifdef PRINT_EDGES
+// to print edges of dijkstra run
+#ifdef PRINT_EDGES
     std::vector<NodeId> logging;
-    #endif
+#endif
   private:
     TimestampedVector<Distance> distance;
     TimestampedVector<NodeId> parent;
@@ -204,18 +203,18 @@ class BidirectionalDijstkra
             }
             steps++;
         }
-        #ifdef PRINT_EDGES
-            std::cerr << "fwd search: " << fwd.logging.size() << ", bwd search:" << bwd.logging.size() << "\n";
-            std::vector<NodeId> log;
-            log.push_back(fwd.logging.size());
-            log.push_back(bwd.logging.size());
-            log.insert(log.end(), fwd.logging.begin(), fwd.logging.end());
-            log.insert(log.end(), bwd.logging.begin(), bwd.logging.end());
-            fwd.logging.clear();
-            bwd.logging.clear();
-            std::cout.write((char *)log.data(), sizeof(uint32_t) * log.size());
-        #endif
-        
+#ifdef PRINT_EDGES
+        std::cerr << "fwd search: " << fwd.logging.size() << ", bwd search:" << bwd.logging.size() << "\n";
+        std::vector<NodeId> log;
+        log.push_back(fwd.logging.size());
+        log.push_back(bwd.logging.size());
+        log.insert(log.end(), fwd.logging.begin(), fwd.logging.end());
+        log.insert(log.end(), bwd.logging.begin(), bwd.logging.end());
+        fwd.logging.clear();
+        bwd.logging.clear();
+        std::cout.write((char *)log.data(), sizeof(uint32_t) * log.size());
+#endif
+
         return {meeting_point, tentative_distance};
     }
 
@@ -229,29 +228,46 @@ class BidirectionalDijstkra
         return bwd.get_parent(v);
     }
 
+    std::pair<Path, Path> unpack_separate(NodeId s, NodeId t, NodeId meeting_point)
+    {
+        Path path_fwd = unpack_fwd_path(s, meeting_point);
+        Path path_bwd = {meeting_point};
+        unpack_bwd_path(meeting_point, t, path_bwd);
+        return {path_fwd, path_bwd};
+    }
+
     std::vector<NodeId> unpack(NodeId s, NodeId t, NodeId meeting_point)
     {
-        std::vector<NodeId> path;
+        auto path = unpack_fwd_path(s, meeting_point);
+        unpack_bwd_path(meeting_point, t, path);
+        return path;
+    }
+
+  private:
+    Path unpack_fwd_path(NodeId s, NodeId meeting_point)
+    {
+        Path path;
         NodeId node = meeting_point;
         while (node != s)
         {
             path.push_back(node);
             node = fwd_parent(node);
         }
-        path.push_back(node);
+        path.push_back(s);
         std::reverse(path.begin(), path.end());
-        // now fwd path added: s..meeting_point
-        // meeting_point..t is still to be added
-        node = meeting_point;
+        return path;
+    }
+
+    void unpack_bwd_path(NodeId meeting_point, NodeId t, Path &path)
+    {
+        NodeId node = meeting_point;
         while (node != t)
         {
             node = bwd_parent(node);
             path.push_back(node);
         }
-        return path;
     }
 
-  private:
     NodeId number_of_nodes;
     Dijkstra fwd;
     Dijkstra bwd;

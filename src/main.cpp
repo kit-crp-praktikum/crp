@@ -71,8 +71,8 @@ static void check_verification_data_exists(std::string data_dir, std::string wei
     check_file_exists_or_bail((root / (weight + "_length")).generic_string());
 }
 
-auto inertial_flow_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels,
-                             int nr_cells, partitioner::InertialFlowParameters params) -> crp::RecursivePartition {
+auto inertial_flow_part = [](crp::Graph *g, partitioner::GeoData *geo_data, int nr_levels, int nr_cells,
+                             partitioner::InertialFlowParameters params) -> crp::RecursivePartition {
     partitioner::InertialFlowPartitioner part(g->num_nodes(), params.number_of_lines, params.group_size);
     partitioner::RecPartitioner rec(part, nr_cells, nr_levels);
 
@@ -451,9 +451,11 @@ int main(int argc, char **argv)
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
         int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantom_levels;
-        crp::RecursivePartition rp(0,0);
-        auto time_partitioner = get_time([&]() {rp =
-            params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);});
+        crp::RecursivePartition rp(0, 0);
+        auto time_partitioner = get_time([&]() {
+            rp = params.algo_params.partitioner(&g, &geo_data, total_number_of_levels,
+                                                params.algo_params.cells_per_level);
+        });
         std::cerr << "partition_time=" << time_partitioner << "\n";
 
         if (params.mode == OperationMode::CustomizeOnly)
@@ -493,7 +495,7 @@ int main(int argc, char **argv)
         auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
         size_t correct = 0;
 
-        nr_queries /= 1000;
+        nr_queries /= 10000;
 #ifdef PRINT_EDGES
         // we only want to have the path for one query
         nr_queries = 1;
@@ -504,7 +506,7 @@ int main(int argc, char **argv)
                 for (size_t i = 0; i < nr_queries; i++)
                 {
                     Distance answer;
-                    auto query_path = algorithm.query_path(sources[i], targets[i], answer);
+                    auto query_path = algorithm.query_path_experimental(sources[i], targets[i], answer);
                     auto check_result = crp::isPathCorrect(&query_path, &g, answer);
 
                     if (check_result == crp::PathUnpackingResult::EdgeMissing)

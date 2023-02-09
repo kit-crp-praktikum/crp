@@ -6,7 +6,7 @@ crp::PathUnpackingResult crp::isPathCorrect(std::vector<NodeId> *path, Graph *g,
 {
     NodeId u, v;
     Distance path_length = 0;
-    for (unsigned i = 0; i < path->size() - 1; i++)
+    for (unsigned i = 0; i + 1 < path->size(); i++)
     {
         u = (*path)[i];
         v = (*path)[i + 1];

@@ -35,7 +35,7 @@ OverlayStructure::OverlayStructure(crp::Graph *g, RecursivePartition _partition)
         // Find border nodes for this level
         for (NodeId u = 0; u < (NodeId)g->num_nodes(); u++)
         {
-            for (auto [v, _] : (*g)[u])
+            for (auto [v, unused] : (*g)[u])
             {
                 // Border nodes are nodes which have an edge to an adjacent cell.
                 // To avoid duplicates, we only add undirected edges in one direction (u < v).

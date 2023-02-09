@@ -158,7 +158,10 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     void prepare(Graph *graph, partitioner::GeoData *geo_data) override;
     void customize() override;
     Distance query(NodeId start, NodeId end) override;
-    std::vector<NodeId> query_path(NodeId start, NodeId end, Distance &out_dist) override;
+    Path query_path(NodeId start, NodeId end, Distance &out_dist) override;
+
+    Path query_path_original(NodeId start, NodeId end, Distance &out_dist);
+    Path query_path_experimental(NodeId start, NodeId end, Distance &out_dist);
 
   public:
     CRPAlgorithm(CRPAlgorithmParams params);
@@ -180,7 +183,11 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     template <bool update_parents> std::pair<NodeId, Distance> _query(NodeId start, NodeId end);
 
     // Unpack start-end shortcut
-    std::vector<NodeId> _unpack(NodeId start, NodeId end);
+    Path _unpack(NodeId start, NodeId end);
+    Path unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level);
+    void unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path);
+
+    inline int get_search_level(NodeId start, NodeId end, NodeId u);
 
     auto get_fwd_scan(const NodeId &start, const NodeId &end);
     auto get_bwd_scan(const NodeId &start, const NodeId &end);

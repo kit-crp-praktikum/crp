@@ -6,11 +6,16 @@
 namespace crp
 {
 
+inline int CRPAlgorithm::get_search_level(NodeId start, NodeId end, NodeId u)
+{
+    return std::min(this->overlay->partition.find_level_differing(start, u),
+                    this->overlay->partition.find_level_differing(end, u));
+}
+
 auto CRPAlgorithm::get_fwd_scan(const NodeId &start, const NodeId &end)
 {
     return [&](NodeId u, auto relaxOp) {
-        const int level = std::min(this->overlay->partition.find_level_differing(start, u),
-                                   this->overlay->partition.find_level_differing(end, u));
+        const int level = get_search_level(start, end, u);
 
         // Iterate graph edges
         for (auto [v, dist] : fwd_remapped[u])
@@ -42,8 +47,7 @@ auto CRPAlgorithm::get_fwd_scan(const NodeId &start, const NodeId &end)
 auto CRPAlgorithm::get_bwd_scan(const NodeId &start, const NodeId &end)
 {
     return [&](NodeId u, auto relaxOp) {
-        const int level = std::min(this->overlay->partition.find_level_differing(start, u),
-                                   this->overlay->partition.find_level_differing(end, u));
+        const int level = get_search_level(start, end, u);
 
         // Iterate graph edges
         for (auto [v, dist] : bwd_remapped[u])
@@ -86,7 +90,115 @@ Distance CRPAlgorithm::query(NodeId start, NodeId end)
     return _query<false>(start, end).second;
 }
 
-std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance &out_dist)
+Path CRPAlgorithm::query_path(NodeId start, NodeId end, Distance &out_dist)
+{
+    return query_path_experimental(start, end, out_dist);
+}
+
+Path CRPAlgorithm::unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level)
+{
+    const int big_cell = overlay->partition.find_cell_for_node(u, level);
+    const auto &search_direction = [&](crp::Graph &directed_graph, auto &&get_distance) {
+        return [&](NodeId x, auto relaxOp) {
+            for (auto [y, w] : directed_graph[x])
+            {
+                if (overlay->partition.find_cell_for_node(y, level) == big_cell)
+                {
+                    relaxOp(y, w);
+                }
+            }
+
+            if (level > 0)
+            {
+                const int lower_level = level - 1;
+                const NodeId xId = overlay->get_internal_id(x, lower_level);
+                if (xId != (NodeId)directed_graph.num_nodes())
+                {
+                    const CellId cell = overlay->get_cell_for_node(x, lower_level);
+                    auto cell_nodes = overlay->get_border_nodes_for_cell(lower_level, cell);
+
+                    for (NodeId yId = 0; yId < cell_nodes.size(); yId++)
+                    {
+                        relaxOp(cell_nodes[yId], get_distance(lower_level, cell, xId, yId));
+                    }
+                }
+            }
+        };
+    };
+
+    const auto &get_dist_fwd = [&](LevelId level, CellId cell, NodeId x, NodeId y) {
+        return *overlay->get_distance(level, cell, x, y);
+    };
+
+    const auto &get_dist_bwd = [&](LevelId level, CellId cell, NodeId x, NodeId y) {
+        return *overlay->get_distanceT(level, cell, y, x);
+    };
+
+    const auto &search_forward = search_direction(fwd_remapped, get_dist_fwd);
+    const auto &search_backward = search_direction(bwd_remapped, get_dist_bwd);
+
+    auto [middle, unused] = bidir_dijkstra->compute_distance_target<true>(u, v, search_forward, search_backward);
+    return bidir_dijkstra->unpack(u, v, middle);
+}
+
+void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
+{
+    if (level == -1)
+    {
+        path.push_back(v);
+        return;
+    }
+
+    auto subpath = unpack_shortcut_one_level(u, v, level);
+    if (level == 0)
+    {
+        path.insert(path.end(), subpath.begin() + 1, subpath.end());
+    }
+    else
+    {
+        for (size_t i = 0; i + 1 < subpath.size(); i++)
+        {
+            unpack_shortcut_recursive(subpath[i], subpath[i + 1], level - 1, path);
+        }
+    }
+}
+
+Path CRPAlgorithm::query_path_original(NodeId start, NodeId end, Distance &out_dist)
+{
+    start = node_mapping[start];
+    end = node_mapping[end];
+
+    auto [meeting_point, dist] = _query<true>(start, end);
+    out_dist = dist;
+
+    auto [fwd_path, bwd_path] = bidir_dijkstra->unpack_separate(start, end, meeting_point);
+
+    Path path = {start};
+    for (size_t i = 0; i + 1 < fwd_path.size(); i++)
+    {
+        NodeId u = fwd_path[i];
+        NodeId v = fwd_path[i + 1];
+        LevelId level = get_search_level(start, end, u);
+        unpack_shortcut_recursive(u, v, level, path);
+    }
+
+    for (size_t i = 0; i + 1 < bwd_path.size(); i++)
+    {
+        NodeId u = bwd_path[i];
+        NodeId v = bwd_path[i + 1];
+        LevelId level = get_search_level(start, end, v);
+        unpack_shortcut_recursive(u, v, level, path);
+    }
+
+    for (auto &x : path)
+    {
+        x = node_inverse_mapping[x];
+    }
+
+    return path;
+}
+
+std::vector<NodeId> CRPAlgorithm::query_path_experimental(NodeId start, NodeId end, Distance &out_dist)
 {
     start = node_mapping[start];
     end = node_mapping[end];
@@ -122,8 +234,7 @@ std::vector<NodeId> CRPAlgorithm::query_path(NodeId start, NodeId end, Distance 
 std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end)
 {
     // run bidijkstra
-    auto [middle, dist] =
-        bidir_dijkstra->compute_distance_target<true>(start, end, get_fwd_scan(start, end), get_bwd_scan(start, end));
+    auto [middle, dist] = _query<true>(start, end);
     auto unpacked_path = bidir_dijkstra->unpack(start, end, middle);
     return unpacked_path;
 }
