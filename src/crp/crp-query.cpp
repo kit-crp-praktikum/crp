@@ -2,6 +2,7 @@
 #include "crp/crp.h"
 #include "data-types.h"
 #include "graph.h"
+#include <map>
 
 namespace crp
 {
@@ -95,6 +96,8 @@ Path CRPAlgorithm::query_path(NodeId start, NodeId end, Distance &out_dist)
     return query_path_experimental(start, end, out_dist);
 }
 
+std::map<std::pair<NodeId, NodeId>, Path> cache[8];
+
 Path CRPAlgorithm::unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level)
 {
     const int big_cell = overlay->partition.find_cell_for_node(u, level);
@@ -138,7 +141,9 @@ Path CRPAlgorithm::unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level)
     const auto &search_backward = search_direction(bwd_remapped, get_dist_bwd);
 
     auto [middle, unused] = bidir_dijkstra->compute_distance_target<true>(u, v, search_forward, search_backward);
-    return bidir_dijkstra->unpack(u, v, middle);
+    auto path = bidir_dijkstra->unpack(u, v, middle);
+    cache[level][{u, v}] = path;
+    return path;
 }
 
 void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
@@ -149,18 +154,28 @@ void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, 
         return;
     }
 
-    auto subpath = unpack_shortcut_one_level(u, v, level);
-    if (level == 0)
+    if (!cache[level].count({u, v}))
     {
-        path.insert(path.end(), subpath.begin() + 1, subpath.end());
-    }
-    else
-    {
-        for (size_t i = 0; i + 1 < subpath.size(); i++)
+        auto subpath = unpack_shortcut_one_level(u, v, level);
+
+        if (level == 0)
         {
-            unpack_shortcut_recursive(subpath[i], subpath[i + 1], level - 1, path);
+            cache[level][{u, v}] = subpath;
+        }
+        else
+        {
+            Path unpacked = {u};
+            for (size_t i = 0; i + 1 < subpath.size(); i++)
+            {
+                unpack_shortcut_recursive(subpath[i], subpath[i + 1], level - 1, unpacked);
+            }
+            cache[level][{u, v}] = unpacked;
         }
     }
+
+    auto &subpath = cache[level][{u, v}];
+    path.insert(path.end(), subpath.begin() + 1, subpath.end());
+    return;
 }
 
 Path CRPAlgorithm::query_path_original(NodeId start, NodeId end, Distance &out_dist)

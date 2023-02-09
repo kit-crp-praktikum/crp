@@ -495,7 +495,6 @@ int main(int argc, char **argv)
         auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
         size_t correct = 0;
 
-        nr_queries /= 10000;
 #ifdef PRINT_EDGES
         // we only want to have the path for one query
         nr_queries = 1;
@@ -503,25 +502,34 @@ int main(int argc, char **argv)
         get_time_debug("queries", [&] {
             if (params.unpack_paths)
             {
-                for (size_t i = 0; i < nr_queries; i++)
+                // warmup phase
+                for (size_t i = 0; i < 1000; i++)
                 {
                     Distance answer;
-                    auto query_path = algorithm.query_path_experimental(sources[i], targets[i], answer);
-                    auto check_result = crp::isPathCorrect(&query_path, &g, answer);
-
-                    if (check_result == crp::PathUnpackingResult::EdgeMissing)
-                    {
-                        std::cout << "edge missing\n";
-                    }
-                    else if (check_result == crp::PathUnpackingResult::TotalLengthWrong)
-                    {
-                        std::cout << "total dist wrong\n";
-                    }
-                    else
-                    {
-                        correct += 1;
-                    }
+                    algorithm.query_path_original(sources[i], targets[i], answer);
                 }
+
+                get_time_debug("query actual", [&] {
+                    for (size_t i = 1000; i < 1000 + nr_queries; i++)
+                    {
+                        Distance answer;
+                        auto query_path = algorithm.query_path_original(sources[i], targets[i], answer);
+                        auto check_result = crp::isPathCorrect(&query_path, &g, answer);
+
+                        if (check_result == crp::PathUnpackingResult::EdgeMissing)
+                        {
+                            std::cout << "edge missing\n";
+                        }
+                        else if (check_result == crp::PathUnpackingResult::TotalLengthWrong)
+                        {
+                            std::cout << "total dist wrong\n";
+                        }
+                        else
+                        {
+                            correct += 1;
+                        }
+                    }
+                });
             }
             else
             {
@@ -548,7 +556,7 @@ int main(int argc, char **argv)
                     Distance dist;
                     query_times[i] = get_time([&] {
                         dist = algorithm.query(sources[i], targets[i]);
-                        algorithm.query_path(sources[i], targets[i], dist);
+                        algorithm.query_path_original(sources[i], targets[i], dist);
                     });
                 }
             }
