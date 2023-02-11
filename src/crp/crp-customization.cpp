@@ -106,6 +106,7 @@ void generic_customize(crp::Graph *g, crp::OverlayStructure *overlay, auto init_
     // init thread local datastructures
     uint32_t largest_cell = largest_cell_size(overlay);
     std::cerr << "-> largest cell in overlay: " << largest_cell << "\n";
+
     auto thread_algo = init_algo(num_threads, largest_cell);
     std::vector<crp::Graph> thread_graph(num_threads);
     std::vector<std::vector<NodeId>> thread_mapping(num_threads, std::vector<NodeId>(g->num_nodes()));

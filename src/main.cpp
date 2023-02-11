@@ -455,6 +455,13 @@ int main(int argc, char **argv)
         auto time_partitioner = get_time([&]() {rp =
             params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);});
         std::cerr << "partition_time=" << time_partitioner << "\n";
+        {   
+            crp::OverlayStructure os(&g, rp);
+            std::cerr << "\noverlay statistics\n";
+            std::cerr << "total_border_nodes=" << os.total_border_nodes() << "\n";
+            std::cerr << "total_memory_bytes=" << os.total_memory_bytes() << "\n";
+            std::cerr << "largest_cell=" << os.largest_cell() << "\n\n";
+        }
 
         if (params.mode == OperationMode::CustomizeOnly)
         {

@@ -110,6 +110,12 @@ struct OverlayStructure
 
     void precompute_cliquesT();
 
+    // statistics of overlay
+    uint64_t total_border_nodes();
+    uint64_t total_memory_bytes();
+    uint64_t largest_cell();
+
+
   private:
     using Clique = std::vector<std::vector<Distance>>;
 
