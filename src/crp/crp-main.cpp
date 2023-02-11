@@ -162,4 +162,50 @@ void OverlayStructure::precompute_cliquesT()
         }
     }
 }
+
+uint64_t OverlayStructure::total_border_nodes()
+{
+    uint64_t border_nodes = 0;
+    for (LevelId level = 0; level < partition.number_of_levels; level++)
+    {
+        for (CellId cell = 0; cell < num_cells_in_level(level); cell++)
+        {
+            border_nodes += cliques[level][cell].size();
+        }
+    }
+    return border_nodes;
+}
+
+uint64_t OverlayStructure::total_memory_bytes()
+{
+    uint64_t num_nodes = node_id_on_level[0].size();
+
+    // node_id_on_level + nodes_in_level_0
+    uint64_t memory_bytes = (partition.number_of_levels + 1) * num_nodes * sizeof(NodeId);
+
+    for (LevelId level = 0; level < partition.number_of_levels; level++)
+    {
+        for (CellId cell = 0; cell < num_cells_in_level(level); cell++)
+        {
+            // clique + cliqueT + border_nodes
+            memory_bytes +=
+                (2 * sizeof(Distance) + sizeof(NodeId)) * cliques[level][cell].size() * cliques[level][cell].size();
+
+            // child_cell_ids
+            memory_bytes += sizeof(CellId) * child_cell_ids[level][cell].size();
+        }
+    }
+    return memory_bytes;
+}
+
+uint64_t OverlayStructure::largest_cell()
+{
+    uint64_t largest_cell = nodes_in_level_0[0].size();
+    for (CellId cell = 0; cell < num_cells_in_level(0); cell++)
+    {
+        largest_cell = std::max(largest_cell, nodes_in_level_0[cell].size());
+    }
+    return largest_cell;
+}
+
 } // namespace crp
