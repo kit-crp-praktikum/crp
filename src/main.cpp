@@ -199,7 +199,7 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
     {
         part = argv[pos + 1];
     }
-
+    std::cerr << "partitioner=" << part << "\n";
     if (part == "inertial")
     {
         partitioner::InertialFlowParameters inertial;
@@ -217,6 +217,8 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
         {
             inertial.group_size = parse_double_or_bail(argv[pos + 1]);
         }
+        std::cerr << "iflow-lines=" << inertial.number_of_lines << "\n";
+        std::cerr << "iflow-group-size=" << inertial.group_size << "\n";
         using namespace std::placeholders;
         params.algo_params.partitioner = std::bind(inertial_flow_part, _1, _2, _3, _4, inertial);
     }
@@ -242,12 +244,14 @@ void select_partitioner(int argc, char **argv, CmdLineParams &params)
         if (pos != -1 && pos != argc - 1)
         {
             kahip.mode = parse_kahip_mode(argv[pos + 1]);
+            std::cerr << "kahip-mode=" << argv[pos + 1] << "\n";
         }
         else
         {
             kahip.mode = partitioner::KaHIPMode::STRONG;
+            std::cerr << "kahip-mode=strong\n";
         }
-
+        std::cerr << "kahip-imbalance=" << kahip.imbalance << "\n";
         using namespace std::placeholders;
         params.algo_params.partitioner = std::bind(kahip_part, _1, _2, _3, _4, kahip);
     }
@@ -337,7 +341,7 @@ static void dump_overlay_structure(crp::OverlayStructure *os)
 void select_customizer(int argc, char **argv, CmdLineParams &params)
 {
     int pos = find_argument_index(argc, argv, 'C', "customizer");
-    std::string customizer = "dijkstra";
+    std::string customizer = "dijkstra-rebuild";
     if (pos != -1 && pos != argc - 1)
     {
         customizer = argv[pos + 1];
@@ -374,6 +378,7 @@ void select_customizer(int argc, char **argv, CmdLineParams &params)
         using namespace std::placeholders;
         params.algo_params.customizer = std::bind(read_customization_matrix_from_file, customizer, _1, _2);
     }
+    std::cerr << "customizer=" << customizer << "\n";
 }
 
 CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
@@ -418,6 +423,16 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     pos = find_required_argument(argc, argv, 'w', "weight", true);
     params.weight_type = argv[pos + 1];
     check_input_directory_valid(params.data_dir, params.weight_type, true);
+
+    std::string path = params.data_dir;
+    if(path.back() == '/') path = path.substr(0, path.size() - 1);
+    std::string graph_name = path.substr(path.find_last_of("/\\") + 1);
+    std::cerr << "graph_name=" << graph_name << "\n";
+    std::cerr << "weight=" << params.weight_type << "\n";
+    std::cerr << "number_of_phantom_levels=" << params.algo_params.number_of_phantom_levels << "\n";
+    std::cerr << "cells_per_level=" << params.algo_params.cells_per_level << "\n";
+    std::cerr << "levels=" << params.algo_params.number_of_levels << "\n";
+    std::cerr << "threads=" << number_of_threads << "\n";
 
     select_partitioner(argc, argv, params);
 
@@ -672,7 +687,9 @@ static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, crp::Graph *g, C
 
 int main(int argc, char **argv)
 {
+    std::cerr << "configuration\n";
     auto params = load_parameters_from_cmdline(argc, argv);
+    std::cerr << "\n";
     // Load graph
     std::filesystem::path dir = params.data_dir;
     crp::Graph g((dir / "first_out").generic_string(), (dir / "head").generic_string(),
