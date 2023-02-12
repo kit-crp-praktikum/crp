@@ -45,6 +45,7 @@ Argument description:
                      dijkstra, bf, dijkstra-rebuild, bf-rebuild, fw-rebuild, bf-simd-rebuild
 
 -t, --threads The number of threads to use.
+-r, --reorder-nodes reorder border nodes to achieve better customization and query time
 
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
@@ -149,6 +150,7 @@ struct CmdLineParams
     OperationMode mode = OperationMode::Benchmark;
     PathUnpackingMode unpack = PathUnpackingMode::NoUnpacking;
     int warmup_queries = 0;
+    bool reorder_nodes = false;
 };
 
 static partitioner::KaHIPMode parse_kahip_mode(std::string value)
@@ -424,6 +426,12 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     params.weight_type = argv[pos + 1];
     check_input_directory_valid(params.data_dir, params.weight_type, true);
 
+    pos = find_argument_index(argc, argv, 'r', "reorder-nodes");
+    if (pos != -1)
+    {
+        params.reorder_nodes = true;
+    }
+
     std::string path = params.data_dir;
     if(path.back() == '/') path = path.substr(0, path.size() - 1);
     std::string graph_name = path.substr(path.find_last_of("/\\") + 1);
@@ -433,6 +441,7 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     std::cerr << "cells_per_level=" << params.algo_params.cells_per_level << "\n";
     std::cerr << "levels=" << params.algo_params.number_of_levels << "\n";
     std::cerr << "threads=" << number_of_threads << "\n";
+    std::cerr << "reorder_nodes=" << params.reorder_nodes << "\n";
 
     select_partitioner(argc, argv, params);
 
@@ -515,7 +524,11 @@ static void handle_precompute_only(CmdLineParams &params, crp::Graph &g, partiti
     if (params.mode == OperationMode::CustomizeOnly)
     {
         std::vector<NodeId> map, revmap;
-        get_time_debug("node reordering", [&] { crp::CRPAlgorithm::reoder_nodes(g, rp, map, revmap); });
+        if (params.reorder_nodes)
+        {
+            get_time_debug("node reordering", [&] { crp::CRPAlgorithm::reoder_nodes(g, rp, map, revmap); });
+        }
+
         crp::OverlayStructure *os;
 
         auto time = get_time([&] {
@@ -699,7 +712,6 @@ int main(int argc, char **argv)
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
         handle_precompute_only(params, g, geo_data);
-        return 0;
     }
 
     crp::CRPAlgorithm algorithm{params.algo_params};
