@@ -6,8 +6,6 @@
 #include <cassert>
 #include <vector>
 
-#define FLOYD_WARSHALL_MAX_N 2000
-
 /**
  * Implementation of Floyd-Warshall Algorithm.
  * Takes as lambda a function that accepts a void(NodeId v, auto f) function.
@@ -28,7 +26,6 @@ class FloydWarshall
   public:
     FloydWarshall(std::size_t size) : number_of_nodes(size), distance(size * size, INF), parent(size * size, INF)
     {
-        assert(size <= FLOYD_WARSHALL_MAX_N);
     }
 
     template <bool update_parents = false> void compute_all_distances(auto neighbors)
