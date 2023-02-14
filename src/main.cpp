@@ -560,8 +560,6 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
     auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
     size_t correct = 0;
 
-    nr_queries = 100;
-
 #ifdef PRINT_EDGES
     // we only want to have the path for one query
     nr_queries = 1;
