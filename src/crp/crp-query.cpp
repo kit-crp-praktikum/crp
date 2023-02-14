@@ -144,7 +144,7 @@ Path CRPAlgorithm::unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level)
     return path;
 }
 
-static LRUCache<std::pair<NodeId, NodeId>, Path> cache(200'000);
+static LRUCache<std::pair<NodeId, NodeId>, Path> cache(1'000'000);
 
 template <bool use_cache> void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
 {

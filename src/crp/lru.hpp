@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <iostream>
 #include <list>
 #include <map>
 #include <optional>
@@ -22,6 +23,11 @@ template <class Key, class Value> class LRUCache
     LRUCache(std::size_t size_limit) : limit(size_limit)
     {
         assert(size_limit > 0);
+    }
+
+    ~LRUCache()
+    {
+        std::cerr << "LRU cache has " << indices.size() << " elements in the end." << std::endl;
     }
 
     Value *get_value(const Key &key)
