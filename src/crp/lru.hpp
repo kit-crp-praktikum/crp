@@ -24,7 +24,7 @@ template <class Key, class Value> class LRUCache
         assert(size_limit > 0);
     }
 
-    std::optional<Value> get_value(const Key &key)
+    Value *get_value(const Key &key)
     {
         auto it = indices.find(key);
         if (it != indices.end())
@@ -36,10 +36,10 @@ template <class Key, class Value> class LRUCache
                 values.splice(values.begin(), values, list_it, std::next(list_it));
             }
 
-            return list_it->first;
+            return &list_it->first;
         }
 
-        return {};
+        return nullptr;
     }
 
     void push_value(const Key &key, Value &&value)

@@ -133,6 +133,8 @@ enum class PathUnpackingMode
     UnpackExperimental,
     // Unpack paths with the original algorithm from the CRP paper.
     UnpackOriginal,
+    // Unpack paths with the original algorithm from the CRP paper with cache enabled.
+    UnpackOriginalCache,
 };
 
 struct CmdLineParams
@@ -449,6 +451,11 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
             std::cerr << "Using original path unpacking strategy" << std::endl;
             params.unpack = PathUnpackingMode::UnpackOriginal;
         }
+        else if (pos != argc - 1 && std::string("original-cache") == argv[pos + 1])
+        {
+            std::cerr << "Using original path unpacking strategy with cache" << std::endl;
+            params.unpack = PathUnpackingMode::UnpackOriginalCache;
+        }
         else
         {
             std::cerr << "Using experimental path unpacking strategy" << std::endl;
@@ -500,6 +507,8 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
     auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
     size_t correct = 0;
 
+    nr_queries /= 10000;
+
 #ifdef PRINT_EDGES
     // we only want to have the path for one query
     nr_queries = 1;
@@ -522,6 +531,9 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
 
         case PathUnpackingMode::UnpackOriginal:
             path = algorithm->query_path_original(from, to, answer);
+            break;
+        case PathUnpackingMode::UnpackOriginalCache:
+            path = algorithm->query_path_original_cache(from, to, answer);
             break;
         }
 
@@ -580,6 +592,9 @@ static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, CmdLineParams &p
 
                 case PathUnpackingMode::UnpackOriginal:
                     algorithm->query_path_original(sources[i], targets[i], answer);
+                    break;
+                case PathUnpackingMode::UnpackOriginalCache:
+                    algorithm->query_path_original_cache(sources[i], targets[i], answer);
                     break;
                 }
             });

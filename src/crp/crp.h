@@ -161,6 +161,7 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     Path query_path(NodeId start, NodeId end, Distance &out_dist) override;
 
     Path query_path_original(NodeId start, NodeId end, Distance &out_dist);
+    Path query_path_original_cache(NodeId start, NodeId end, Distance &out_dist);
     Path query_path_experimental(NodeId start, NodeId end, Distance &out_dist);
 
   public:
@@ -185,8 +186,9 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     // Unpack start-end shortcut
     Path _unpack(NodeId start, NodeId end);
     Path unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level);
-    void unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path);
+    template <bool use_cache> void unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path);
 
+    template <bool use_cache> Path _query_path_original(NodeId start, NodeId end, Distance &out_dist);
     inline int get_search_level(NodeId start, NodeId end, NodeId u);
 
     auto get_fwd_scan(const NodeId &start, const NodeId &end);

@@ -1,5 +1,6 @@
 #include "algorithms/dijkstra.hpp"
 #include "crp/crp.h"
+#include "crp/lru.hpp"
 #include "data-types.h"
 #include "graph.h"
 #include <map>
@@ -96,8 +97,6 @@ Path CRPAlgorithm::query_path(NodeId start, NodeId end, Distance &out_dist)
     return query_path_experimental(start, end, out_dist);
 }
 
-std::map<std::pair<NodeId, NodeId>, Path> cache[8];
-
 Path CRPAlgorithm::unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level)
 {
     const int big_cell = overlay->partition.find_cell_for_node(u, level);
@@ -142,11 +141,12 @@ Path CRPAlgorithm::unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level)
 
     auto [middle, unused] = bidir_dijkstra->compute_distance_target<true>(u, v, search_forward, search_backward);
     auto path = bidir_dijkstra->unpack(u, v, middle);
-    cache[level][{u, v}] = path;
     return path;
 }
 
-void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
+static LRUCache<std::pair<NodeId, NodeId>, Path> cache(200'000);
+
+template <bool use_cache> void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
 {
     if (level == -1)
     {
@@ -154,31 +154,40 @@ void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, 
         return;
     }
 
-    if (!cache[level].count({u, v}))
+    if constexpr (use_cache)
     {
-        auto subpath = unpack_shortcut_one_level(u, v, level);
-
-        if (level == 0)
+        auto cached = cache.get_value({u, v});
+        if (cached)
         {
-            cache[level][{u, v}] = subpath;
-        }
-        else
-        {
-            Path unpacked = {u};
-            for (size_t i = 0; i + 1 < subpath.size(); i++)
-            {
-                unpack_shortcut_recursive(subpath[i], subpath[i + 1], level - 1, unpacked);
-            }
-            cache[level][{u, v}] = unpacked;
+            path.insert(path.end(), cached->begin() + 1, cached->end());
+            return;
         }
     }
 
-    auto &subpath = cache[level][{u, v}];
-    path.insert(path.end(), subpath.begin() + 1, subpath.end());
-    return;
+    auto subpath = unpack_shortcut_one_level(u, v, level);
+    Path unpacked;
+
+    if (level == 0)
+    {
+        unpacked = subpath;
+    }
+    else
+    {
+        unpacked = {u};
+        for (size_t i = 0; i + 1 < subpath.size(); i++)
+        {
+            unpack_shortcut_recursive<use_cache>(subpath[i], subpath[i + 1], level - 1, unpacked);
+        }
+    }
+
+    path.insert(path.end(), unpacked.begin() + 1, unpacked.end());
+    if constexpr (use_cache)
+    {
+        cache.push_value({u, v}, std::move(unpacked));
+    }
 }
 
-Path CRPAlgorithm::query_path_original(NodeId start, NodeId end, Distance &out_dist)
+template <bool use_cache> Path CRPAlgorithm::_query_path_original(NodeId start, NodeId end, Distance &out_dist)
 {
     start = node_mapping[start];
     end = node_mapping[end];
@@ -194,7 +203,7 @@ Path CRPAlgorithm::query_path_original(NodeId start, NodeId end, Distance &out_d
         NodeId u = fwd_path[i];
         NodeId v = fwd_path[i + 1];
         LevelId level = get_search_level(start, end, u);
-        unpack_shortcut_recursive(u, v, level, path);
+        unpack_shortcut_recursive<use_cache>(u, v, level, path);
     }
 
     for (size_t i = 0; i + 1 < bwd_path.size(); i++)
@@ -202,7 +211,7 @@ Path CRPAlgorithm::query_path_original(NodeId start, NodeId end, Distance &out_d
         NodeId u = bwd_path[i];
         NodeId v = bwd_path[i + 1];
         LevelId level = get_search_level(start, end, v);
-        unpack_shortcut_recursive(u, v, level, path);
+        unpack_shortcut_recursive<use_cache>(u, v, level, path);
     }
 
     for (auto &x : path)
@@ -211,6 +220,16 @@ Path CRPAlgorithm::query_path_original(NodeId start, NodeId end, Distance &out_d
     }
 
     return path;
+}
+
+Path CRPAlgorithm::query_path_original(NodeId start, NodeId end, Distance &out_dist)
+{
+    return _query_path_original<false>(start, end, out_dist);
+}
+
+Path CRPAlgorithm::query_path_original_cache(NodeId start, NodeId end, Distance &out_dist)
+{
+    return _query_path_original<true>(start, end, out_dist);
 }
 
 std::vector<NodeId> CRPAlgorithm::query_path_experimental(NodeId start, NodeId end, Distance &out_dist)
