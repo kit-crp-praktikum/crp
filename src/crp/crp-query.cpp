@@ -234,6 +234,17 @@ Path CRPAlgorithm::query_path_original_cache(NodeId start, NodeId end, Distance 
 
 std::vector<NodeId> CRPAlgorithm::query_path_experimental(NodeId start, NodeId end, Distance &out_dist)
 {
+    return _query_path_experimental<false>(start, end, out_dist);
+}
+
+std::vector<NodeId> CRPAlgorithm::query_path_experimental_cache(NodeId start, NodeId end, Distance &out_dist)
+{
+    return _query_path_experimental<true>(start, end, out_dist);
+}
+
+template <bool use_cache>
+std::vector<NodeId> CRPAlgorithm::_query_path_experimental(NodeId start, NodeId end, Distance &out_dist)
+{
     start = node_mapping[start];
     end = node_mapping[end];
 
@@ -247,7 +258,7 @@ std::vector<NodeId> CRPAlgorithm::query_path_experimental(NodeId start, NodeId e
         NodeId u = path[i];
         NodeId v = path[i + 1];
 
-        auto unpacked_path = _unpack(u, v);
+        auto unpacked_path = _unpack<use_cache>(u, v);
 
         if (unpacked_path.size() > 2)
         {
@@ -265,11 +276,27 @@ std::vector<NodeId> CRPAlgorithm::query_path_experimental(NodeId start, NodeId e
     return path;
 }
 
-std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end)
+template <bool use_cache> std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end)
 {
+    if constexpr (use_cache)
+    {
+        auto cached = cache.get_value({start, end});
+        if (cached)
+        {
+            return *cached;
+        }
+    }
+
     // run bidijkstra
     auto [middle, dist] = _query<true>(start, end);
     auto unpacked_path = bidir_dijkstra->unpack(start, end, middle);
+
+    if constexpr (use_cache)
+    {
+        auto cpy = unpacked_path;
+        cache.push_value({start, end}, std::move(cpy));
+    }
+
     return unpacked_path;
 }
 } // namespace crp

@@ -132,6 +132,8 @@ enum class PathUnpackingMode
     NoUnpacking,
     // Unpack paths with the experimental implementation from Nora.
     UnpackExperimental,
+    // Unpack paths with the experimental implementation from Nora.
+    UnpackExperimentalCache,
     // Unpack paths with the original algorithm from the CRP paper.
     UnpackOriginal,
     // Unpack paths with the original algorithm from the CRP paper with cache enabled.
@@ -458,6 +460,11 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
             std::cerr << "Using original path unpacking strategy with cache" << std::endl;
             params.unpack = PathUnpackingMode::UnpackOriginalCache;
         }
+        else if (pos != argc - 1 && std::string("experimental-cache") == argv[pos + 1])
+        {
+            std::cerr << "Using experimental path unpacking strategy with cache" << std::endl;
+            params.unpack = PathUnpackingMode::UnpackExperimentalCache;
+        }
         else
         {
             std::cerr << "Using experimental path unpacking strategy" << std::endl;
@@ -468,13 +475,6 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     pos = find_argument_index(argc, argv, ' ', "warmup");
     if (pos != -1 && pos != argc - 1)
     {
-        if (params.unpack != PathUnpackingMode::UnpackOriginalCache)
-        {
-            std::cerr << "Warmup queries are only useful for the original path unpacking + cache strategy!"
-                      << std::endl;
-            std::exit(-1);
-        }
-
         params.warmup_queries = parse_integer_or_bail(argv[pos + 1]);
         std::cerr << "Using " << params.warmup_queries << " warmup queries." << std::endl;
     }
@@ -513,9 +513,9 @@ static void handle_precompute_only(CmdLineParams &params, crp::Graph &g, partiti
     }
 }
 
-static void run_warmup_queries(crp::CRPAlgorithm *algorithm, size_t n, size_t warmup_queries)
+static void run_warmup_queries(crp::CRPAlgorithm *algorithm, size_t n, CmdLineParams &params)
 {
-    if (warmup_queries == 0)
+    if (params.warmup_queries == 0)
     {
         return;
     }
@@ -525,12 +525,27 @@ static void run_warmup_queries(crp::CRPAlgorithm *algorithm, size_t n, size_t wa
     auto dist = std::uniform_int_distribution<NodeId>(0, n - 1);
 
     get_time_debug("cache warmup queries", [&] {
-        for (size_t i = 0; i < warmup_queries; i++)
+        for (size_t i = 0; i < params.warmup_queries; i++)
         {
             Distance ans;
             size_t x = dist(mt);
             size_t y = dist(mt);
-            algorithm->query_path_original_cache(x, y, ans);
+
+            switch (params.unpack)
+            {
+            case PathUnpackingMode::UnpackExperimentalCache:
+                algorithm->query_path_experimental_cache(x, y, ans);
+                break;
+            case PathUnpackingMode::UnpackOriginalCache:
+                algorithm->query_path_original_cache(x, y, ans);
+                break;
+
+            case PathUnpackingMode::UnpackExperimental:
+            case PathUnpackingMode::NoUnpacking: // fallthrough
+            case PathUnpackingMode::UnpackOriginal:
+                std::cerr << "Path unpacking mode does not support warmup and cache!" << std::endl;
+                std::exit(-1);
+            }
         }
     });
 }
@@ -545,12 +560,14 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
     auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
     size_t correct = 0;
 
+    nr_queries = 100;
+
 #ifdef PRINT_EDGES
     // we only want to have the path for one query
     nr_queries = 1;
 #endif
 
-    run_warmup_queries(algorithm, g->num_nodes(), params.warmup_queries);
+    run_warmup_queries(algorithm, g->num_nodes(), params);
     const auto &run_query_and_check = [&](NodeId from, NodeId to, Distance expected) -> int // returns 1 on correct
     {
         Distance answer;
@@ -561,11 +578,12 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
         case PathUnpackingMode::NoUnpacking:
             answer = algorithm->query(from, to);
             return answer == expected;
-
         case PathUnpackingMode::UnpackExperimental:
             path = algorithm->query_path_experimental(from, to, answer);
             break;
-
+        case PathUnpackingMode::UnpackExperimentalCache:
+            path = algorithm->query_path_experimental_cache(from, to, answer);
+            break;
         case PathUnpackingMode::UnpackOriginal:
             path = algorithm->query_path_original(from, to, answer);
             break;
@@ -612,7 +630,7 @@ static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, crp::Graph *g, C
     size_t nr_queries = sources.size();
 
     std::vector<uint64_t> query_times(nr_queries);
-    run_warmup_queries(algorithm, g->num_nodes(), params.warmup_queries);
+    run_warmup_queries(algorithm, g->num_nodes(), params);
 
     get_time_debug("queries", [&] {
         Distance answer;
@@ -627,6 +645,9 @@ static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, crp::Graph *g, C
 
                 case PathUnpackingMode::UnpackExperimental:
                     algorithm->query_path_experimental(sources[i], targets[i], answer);
+                    break;
+                case PathUnpackingMode::UnpackExperimentalCache:
+                    algorithm->query_path_experimental_cache(sources[i], targets[i], answer);
                     break;
 
                 case PathUnpackingMode::UnpackOriginal:
