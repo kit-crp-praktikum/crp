@@ -48,7 +48,8 @@ Argument description:
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
 --dump-customization Dump customization data on stdout.
---path-unpacking Unpack paths during benchmark and verification instead of computing shortest distances only.
+--path-unpacking <|original> Unpack paths during benchmark and verification instead of computing shortest
+                        distances only. If original is set, the original CRP algorithm is used.
 
 --iflow-lines number of lines used for Inertial Flow
 --iflow-size ratio in (0.0, 0.5) of block size of one part
@@ -124,6 +125,16 @@ enum class OperationMode
     CustomizeOnly,
 };
 
+enum class PathUnpackingMode
+{
+    // Do not unpack paths at all.
+    NoUnpacking,
+    // Unpack paths with the experimental implementation from Nora.
+    UnpackExperimental,
+    // Unpack paths with the original algorithm from the CRP paper.
+    UnpackOriginal,
+};
+
 struct CmdLineParams
 {
     crp::CRPAlgorithmParams algo_params;
@@ -131,7 +142,7 @@ struct CmdLineParams
     std::string query_dir;
     std::string weight_type;
     OperationMode mode = OperationMode::Benchmark;
-    bool unpack_paths = false;
+    PathUnpackingMode unpack = PathUnpackingMode::NoUnpacking;
 };
 
 static partitioner::KaHIPMode parse_kahip_mode(std::string value)
@@ -433,10 +444,149 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     pos = find_argument_index(argc, argv, ' ', "path-unpacking");
     if (pos != -1)
     {
-        params.unpack_paths = true;
+        if (pos != argc - 1 && std::string("original") == argv[pos + 1])
+        {
+            std::cerr << "Using original path unpacking strategy" << std::endl;
+            params.unpack = PathUnpackingMode::UnpackOriginal;
+        }
+        else
+        {
+            std::cerr << "Using experimental path unpacking strategy" << std::endl;
+            params.unpack = PathUnpackingMode::UnpackExperimental;
+        }
     }
 
     return params;
+}
+
+static void handle_precompute_only(CmdLineParams &params, crp::Graph &g, partitioner::GeoData &geo_data)
+{
+    int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantom_levels;
+    crp::RecursivePartition rp(0, 0);
+    auto time_partitioner = get_time([&]() {
+        rp = params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);
+    });
+    std::cerr << "partition_time=" << time_partitioner << "\n";
+
+    if (params.mode == OperationMode::CustomizeOnly)
+    {
+        std::vector<NodeId> map, revmap;
+        get_time_debug("node reordering", [&] { crp::CRPAlgorithm::reoder_nodes(g, rp, map, revmap); });
+        crp::OverlayStructure *os;
+
+        auto time = get_time([&] {
+            os = new crp::OverlayStructure(&g, rp);
+            params.algo_params.customizer(&g, os);
+            os->remove_phantom_levels(params.algo_params.number_of_phantom_levels);
+        });
+
+        std::cerr << "customizer_time=" << time << "\n";
+        dump_overlay_structure(os);
+    }
+    else /* if (mode == OperationMode::PartitionOnly) */
+    {
+        // Dump partition data on stdout
+        std::cout.write((char *)rp.mask.data(), sizeof(uint32_t) * rp.mask.size());
+    }
+}
+
+static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdLineParams &params)
+{
+    std::filesystem::path query_dir = params.query_dir;
+    auto sources = load_vector<uint32_t>((query_dir / "source").generic_string());
+    auto targets = load_vector<uint32_t>((query_dir / "target").generic_string());
+
+    size_t nr_queries = sources.size();
+    auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
+    size_t correct = 0;
+
+#ifdef PRINT_EDGES
+    // we only want to have the path for one query
+    nr_queries = 1;
+#endif
+
+    const auto &run_query_and_check = [&](NodeId from, NodeId to, Distance expected) -> int // returns 1 on correct
+    {
+        Distance answer;
+        Path path;
+
+        switch (params.unpack)
+        {
+        case PathUnpackingMode::NoUnpacking:
+            answer = algorithm->query(from, to);
+            return answer == expected;
+
+        case PathUnpackingMode::UnpackExperimental:
+            path = algorithm->query_path_experimental(from, to, answer);
+            break;
+
+        case PathUnpackingMode::UnpackOriginal:
+            path = algorithm->query_path_original(from, to, answer);
+            break;
+        }
+
+        auto check_result = crp::isPathCorrect(&path, g, answer);
+
+        if (check_result == crp::PathUnpackingResult::EdgeMissing)
+        {
+            std::cout << "edge missing\n";
+            return 0;
+        }
+        else if (check_result == crp::PathUnpackingResult::TotalLengthWrong)
+        {
+            std::cout << "total dist wrong\n";
+            return 0;
+        }
+        else
+        {
+            return 1;
+        }
+    };
+
+    get_time_debug("queries", [&] {
+        for (size_t i = 0; i < nr_queries; i++)
+        {
+            correct += run_query_and_check(sources[i], targets[i], answers[i]);
+        }
+    });
+#ifdef PRINT_EDGES
+    return 0;
+#endif
+    std::cout << correct << " out of " << nr_queries << " queries are correct." << std::endl;
+}
+
+static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, CmdLineParams &params)
+{
+    std::filesystem::path query_dir = params.query_dir;
+    auto sources = load_vector<uint32_t>((query_dir / "source").generic_string());
+    auto targets = load_vector<uint32_t>((query_dir / "target").generic_string());
+    size_t nr_queries = sources.size();
+
+    std::vector<uint64_t> query_times(nr_queries);
+    get_time_debug("queries", [&] {
+        Distance answer;
+        for (size_t i = 0; i < nr_queries; i++)
+        {
+            query_times[i] = get_time([&] {
+                switch (params.unpack)
+                {
+                case PathUnpackingMode::NoUnpacking:
+                    algorithm->query(sources[i], targets[i]);
+                    break;
+
+                case PathUnpackingMode::UnpackExperimental:
+                    algorithm->query_path_experimental(sources[i], targets[i], answer);
+                    break;
+
+                case PathUnpackingMode::UnpackOriginal:
+                    algorithm->query_path_original(sources[i], targets[i], answer);
+                    break;
+                }
+            });
+        }
+    });
+
+    std::cout.write((char *)query_times.data(), sizeof(uint64_t) * query_times.size());
 }
 
 int main(int argc, char **argv)
@@ -450,126 +600,20 @@ int main(int argc, char **argv)
 
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
-        int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantom_levels;
-        crp::RecursivePartition rp(0, 0);
-        auto time_partitioner = get_time([&]() {
-            rp = params.algo_params.partitioner(&g, &geo_data, total_number_of_levels,
-                                                params.algo_params.cells_per_level);
-        });
-        std::cerr << "partition_time=" << time_partitioner << "\n";
-
-        if (params.mode == OperationMode::CustomizeOnly)
-        {
-            std::vector<NodeId> map, revmap;
-            get_time_debug("node reordering", [&] { crp::CRPAlgorithm::reoder_nodes(g, rp, map, revmap); });
-            crp::OverlayStructure *os;
-
-            auto time = get_time([&] {
-                os = new crp::OverlayStructure(&g, rp);
-                params.algo_params.customizer(&g, os);
-                os->remove_phantom_levels(params.algo_params.number_of_phantom_levels);
-            });
-
-            std::cerr << "customizer_time=" << time << "\n";
-            dump_overlay_structure(os);
-        }
-        else /* if (mode == OperationMode::PartitionOnly) */
-        {
-            // Dump partition data on stdout
-            std::cout.write((char *)rp.mask.data(), sizeof(uint32_t) * rp.mask.size());
-        }
-
+        handle_precompute_only(params, g, geo_data);
         return 0;
     }
+
     crp::CRPAlgorithm algorithm{params.algo_params};
     get_time_debug("preparation", [&] { algorithm.prepare(&g, &geo_data); });
     get_time_debug("customization", [&] { algorithm.customize(); });
 
-    std::filesystem::path query_dir = params.query_dir;
-    auto sources = load_vector<uint32_t>((query_dir / "source").generic_string());
-    auto targets = load_vector<uint32_t>((query_dir / "target").generic_string());
-
-    size_t nr_queries = sources.size();
     if (params.mode == OperationMode::Verify)
     {
-        auto answers = load_vector<uint32_t>((query_dir / (params.weight_type + "_length")).generic_string());
-        size_t correct = 0;
-
-#ifdef PRINT_EDGES
-        // we only want to have the path for one query
-        nr_queries = 1;
-#endif
-        get_time_debug("queries", [&] {
-            if (params.unpack_paths)
-            {
-                // warmup phase
-                for (size_t i = 0; i < 1000; i++)
-                {
-                    Distance answer;
-                    algorithm.query_path_original(sources[i], targets[i], answer);
-                }
-
-                get_time_debug("query actual", [&] {
-                    for (size_t i = 1000; i < 1000 + nr_queries; i++)
-                    {
-                        Distance answer;
-                        auto query_path = algorithm.query_path_original(sources[i], targets[i], answer);
-                        auto check_result = crp::isPathCorrect(&query_path, &g, answer);
-
-                        if (check_result == crp::PathUnpackingResult::EdgeMissing)
-                        {
-                            std::cout << "edge missing\n";
-                        }
-                        else if (check_result == crp::PathUnpackingResult::TotalLengthWrong)
-                        {
-                            std::cout << "total dist wrong\n";
-                        }
-                        else
-                        {
-                            correct += 1;
-                        }
-                    }
-                });
-            }
-            else
-            {
-                for (size_t i = 0; i < nr_queries; i++)
-                {
-                    Distance answer = algorithm.query(sources[i], targets[i]);
-                    correct += answer == answers[i];
-                }
-            }
-        });
-#ifdef PRINT_EDGES
-        return 0;
-#endif
-        std::cout << correct << " out of " << nr_queries << " queries are correct." << std::endl;
+        run_queries_verify(&algorithm, &g, params);
     }
     else
     {
-        std::vector<uint64_t> query_times(nr_queries);
-        get_time_debug("queries", [&] {
-            if (params.unpack_paths)
-            {
-                for (size_t i = 0; i < nr_queries; i++)
-                {
-                    Distance dist;
-                    query_times[i] = get_time([&] {
-                        dist = algorithm.query(sources[i], targets[i]);
-                        algorithm.query_path_original(sources[i], targets[i], dist);
-                    });
-                }
-            }
-            else
-            {
-                for (size_t i = 0; i < nr_queries; i++)
-                {
-                    query_times[i] = get_time([&] { algorithm.query(sources[i], targets[i]); });
-                }
-            }
-        });
-
-        std::cout.write((char *)query_times.data(), sizeof(uint64_t) * query_times.size());
-        // save for dijkstra rank plot
+        run_queries_benchmark(&algorithm, params);
     }
 }
