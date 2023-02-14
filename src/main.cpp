@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <map>
 #include <omp.h>
+#include <random>
 
 static void print_help()
 {
@@ -145,6 +146,7 @@ struct CmdLineParams
     std::string weight_type;
     OperationMode mode = OperationMode::Benchmark;
     PathUnpackingMode unpack = PathUnpackingMode::NoUnpacking;
+    int warmup_queries = 0;
 };
 
 static partitioner::KaHIPMode parse_kahip_mode(std::string value)
@@ -463,6 +465,20 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
         }
     }
 
+    pos = find_argument_index(argc, argv, ' ', "warmup");
+    if (pos != -1 && pos != argc - 1)
+    {
+        if (params.unpack != PathUnpackingMode::UnpackOriginalCache)
+        {
+            std::cerr << "Warmup queries are only useful for the original path unpacking + cache strategy!"
+                      << std::endl;
+            std::exit(-1);
+        }
+
+        params.warmup_queries = parse_integer_or_bail(argv[pos + 1]);
+        std::cerr << "Using " << params.warmup_queries << " warmup queries." << std::endl;
+    }
+
     return params;
 }
 
@@ -497,6 +513,28 @@ static void handle_precompute_only(CmdLineParams &params, crp::Graph &g, partiti
     }
 }
 
+static void run_warmup_queries(crp::CRPAlgorithm *algorithm, size_t n, size_t warmup_queries)
+{
+    if (warmup_queries == 0)
+    {
+        return;
+    }
+
+    std::random_device rd;
+    std::mt19937 mt{rd()};
+    auto dist = std::uniform_int_distribution<NodeId>(0, n - 1);
+
+    get_time_debug("cache warmup queries", [&] {
+        for (size_t i = 0; i < warmup_queries; i++)
+        {
+            Distance ans;
+            size_t x = dist(mt);
+            size_t y = dist(mt);
+            algorithm->query_path_original_cache(x, y, ans);
+        }
+    });
+}
+
 static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdLineParams &params)
 {
     std::filesystem::path query_dir = params.query_dir;
@@ -514,6 +552,7 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
     nr_queries = 1;
 #endif
 
+    run_warmup_queries(algorithm, g->num_nodes(), params.warmup_queries);
     const auto &run_query_and_check = [&](NodeId from, NodeId to, Distance expected) -> int // returns 1 on correct
     {
         Distance answer;
@@ -567,7 +606,7 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
     std::cout << correct << " out of " << nr_queries << " queries are correct." << std::endl;
 }
 
-static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, CmdLineParams &params)
+static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdLineParams &params)
 {
     std::filesystem::path query_dir = params.query_dir;
     auto sources = load_vector<uint32_t>((query_dir / "source").generic_string());
@@ -575,6 +614,8 @@ static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, CmdLineParams &p
     size_t nr_queries = sources.size();
 
     std::vector<uint64_t> query_times(nr_queries);
+    run_warmup_queries(algorithm, g->num_nodes(), params.warmup_queries);
+
     get_time_debug("queries", [&] {
         Distance answer;
         for (size_t i = 0; i < nr_queries; i++)
@@ -629,6 +670,6 @@ int main(int argc, char **argv)
     }
     else
     {
-        run_queries_benchmark(&algorithm, params);
+        run_queries_benchmark(&algorithm, &g, params);
     }
 }
