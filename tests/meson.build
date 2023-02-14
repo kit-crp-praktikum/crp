@@ -4,6 +4,10 @@ basic_algos = executable('basic-algorithms-test',
     ['basic-algorithms-test.cpp'], dependencies: [crp_dep, doctest])
 test('Test that basic algorithms work correctly', basic_algos)
 
+lru = executable('lru-cache',
+    ['lru-cache-test.cpp'], dependencies: [crp_dep, doctest])
+test('Test that LRU Cache works', lru)
+
 whole_algorithm = executable('whole-algorithm-test',
     ['whole-algorithm-test.cpp'], dependencies: [crp_dep, doctest])
 test('Test that CRP works correctly', whole_algorithm)
