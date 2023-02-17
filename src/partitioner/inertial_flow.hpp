@@ -11,8 +11,8 @@
 #include <numeric>
 #include <vector>
 
-#include "lib/debug.h"
 #include "bipartitioner.h"
+#include "lib/debug.h"
 
 /**
  * Implementation of Inertial-Flow partitioner.
@@ -22,7 +22,7 @@ namespace partitioner
 
 struct InertialFlowParameters
 {
-    uint32_t number_of_lines; 
+    uint32_t number_of_lines;
     double group_size;
 };
 class InertialFlowPartitioner : public BiPartitioner
@@ -75,16 +75,6 @@ class InertialFlowPartitioner : public BiPartitioner
 
         uint32_t n = graph.size();
         DinicsFlow dinics(n);
-        for (NodeId v = 0; v < n; v++)
-        {
-            for (auto [w, dist] : graph[v])
-            {
-                if (v < w)
-                {
-                    dinics.add_edge(v, w, dist); // add each undirected edge only once
-                }
-            }
-        }
 
         for (uint32_t i = 0; i < number_of_lines; i++)
         {
@@ -95,7 +85,7 @@ class InertialFlowPartitioner : public BiPartitioner
                 left_nodes.push_back(sorted_nodes[i]);
                 right_nodes.push_back(sorted_nodes[n - 1 - i]);
             }
-            auto [cut_size, partition] = dinics.multi_src_target_min_cut_partition(left_nodes, right_nodes);
+            auto [cut_size, partition] = dinics.multi_src_target_min_cut_partition(graph, left_nodes, right_nodes);
             balance = std::count(partition.begin(), partition.end(), true);
             balance = std::min(balance, n - balance);
             if (cut_size < best_cut || ((cut_size == best_cut) && balance >= best_balance))

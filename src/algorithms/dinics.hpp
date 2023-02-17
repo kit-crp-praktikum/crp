@@ -1,6 +1,8 @@
 #pragma once
 
 #include "data-types.h"
+#include "graph.h"
+#include "lib/timer.h"
 #include <iostream>
 #include <limits>
 #include <queue>
@@ -36,7 +38,8 @@ class DinicsFlow
     DinicsFlow(uint32_t num_nodes)
         : graph(num_nodes + 2), // 2 extra nodes for multi src and target nodes
           work(num_nodes + 2), bfs_distance(num_nodes + 2), multi_src(num_nodes), multi_target(num_nodes + 1),
-          num_nodes(num_nodes), INF_FLOW(std::numeric_limits<Flow>::max() / 2)
+          is_source(num_nodes), is_target(num_nodes), num_nodes(num_nodes),
+          INF_FLOW(std::numeric_limits<Flow>::max() / 2)
     {
     } // / 2 to avoid INF - flow overflow for flow < 0
 
@@ -63,9 +66,10 @@ class DinicsFlow
         return total_flow;
     }
 
-    Flow multi_src_target_max_flow(std::vector<NodeId> &src_nodes, std::vector<NodeId> &target_nodes)
+    Flow multi_src_target_max_flow(const crp::AdjacencyList &original_graph, std::vector<NodeId> &src_nodes,
+                                   std::vector<NodeId> &target_nodes)
     {
-        setup_multi_src_target(src_nodes, target_nodes);
+        setup_multi_src_target(original_graph, src_nodes, target_nodes);
         Flow flow = max_flow(multi_src, multi_target);
         reset_multi_src_target();
         return flow;
@@ -79,47 +83,63 @@ class DinicsFlow
         generic_bfs(src, is_residual);
         for (NodeId v = 0; v < num_nodes; v++)
         {
-            left_most[v] = bfs_distance[v] != -1;
+            left_most[v] = (is_source[v] || bfs_distance[v] != -1);
         }
         return {cut_size, left_most};
     }
 
-    std::pair<uint32_t, std::vector<bool>> multi_src_target_min_cut_partition(std::vector<NodeId> &src_nodes,
+    std::pair<uint32_t, std::vector<bool>> multi_src_target_min_cut_partition(const crp::AdjacencyList &original,
+                                                                              std::vector<NodeId> &src_nodes,
                                                                               std::vector<NodeId> &target_nodes)
     {
-        setup_multi_src_target(src_nodes, target_nodes);
+        setup_multi_src_target(original, src_nodes, target_nodes);
         auto [cut_size, partition] = min_cut_partition(multi_src, multi_target);
+
         reset_multi_src_target();
         return {cut_size, partition};
     }
 
   private:
-    void setup_multi_src_target(std::vector<NodeId> &src_nodes, std::vector<NodeId> &target_nodes)
+    void setup_multi_src_target(const crp::AdjacencyList &original, std::vector<NodeId> &src_nodes,
+                                std::vector<NodeId> &target_nodes)
     {
         for (NodeId v : src_nodes)
         {
-            add_edge(multi_src, v, INF_FLOW);
+            is_source[v] = 1;
         }
+
         for (NodeId v : target_nodes)
         {
-            add_edge(v, multi_target, INF_FLOW);
+            is_target[v] = 1;
+        }
+
+        for (NodeId u = 0; u < num_nodes; u++)
+        {
+            for (auto [v, w] : original[u])
+            {
+                if (is_source[u] && !is_source[v])
+                {
+                    add_edge(multi_src, v, 1);
+                }
+
+                if (!is_target[u] && is_target[v])
+                {
+                    add_edge(u, multi_target, 1);
+                }
+
+                if (!is_source[u] && !is_target[v] && u < v)
+                {
+                    add_edge(u, v, 1);
+                }
+            }
         }
     }
 
     void reset_multi_src_target()
     {
-        // delete reverse edges
-        for (Edge &e : graph[multi_src])
-        {
-            graph[e.to].pop_back();
-        }
-        for (Edge &e : graph[multi_target])
-        {
-            graph[e.to].pop_back();
-        }
-        // delete src, target outgoing edges
-        graph[multi_src].clear();
-        graph[multi_target].clear();
+        std::fill(is_source.begin(), is_source.end(), false);
+        std::fill(is_target.begin(), is_target.end(), false);
+        graph.assign(num_nodes + 2, {});
     }
 
     void reset()
@@ -142,6 +162,9 @@ class DinicsFlow
         {
             NodeId v = queue.front();
             queue.pop();
+            if (v == multi_target)
+                continue;
+
             for (Edge &e : graph[v])
             {
                 if (bfs_distance[e.to] == -1 && predicate(e))
@@ -174,7 +197,7 @@ class DinicsFlow
         for (; work[v] < graph[v].size(); work[v]++)
         {
             Edge &e = graph[v][work[v]];
-            if (bfs_distance[e.to] == 1 + bfs_distance[v] && e.has_capacity())
+            if ((e.to == target || bfs_distance[e.to] == 1 + bfs_distance[v]) && e.has_capacity())
             {
                 Flow flow = dfs(e.to, target, std::min(residual_flow, e.remaining_capacity()));
                 if (flow > 0)
@@ -192,6 +215,8 @@ class DinicsFlow
     std::queue<NodeId> queue;
     NodeId multi_src;
     NodeId multi_target;
+    std::vector<bool> is_source;
+    std::vector<bool> is_target;
     NodeId num_nodes;
     Flow INF_FLOW;
 };

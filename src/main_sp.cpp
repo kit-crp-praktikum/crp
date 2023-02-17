@@ -124,13 +124,13 @@ void test_flow2()
     std::vector<NodeId> target = {5, 6, 7};
     std::cout << "\nmultistart dinics"
               << "\n";
-    std::cout << dinics.multi_src_target_max_flow(src, target) << "\n";
-    auto [cut, v] = dinics.multi_src_target_min_cut_partition(src, target);
-    for (auto b : v)
-    {
-        std::cout << b << " ";
-    }
-    std::cout << "\n";
+    // std::cout << dinics.multi_src_target_max_flow(src, target) << "\n";
+    // auto [cut, v] = dinics.multi_src_target_min_cut_partition(src, target);
+    // for (auto b : v)
+    //{
+    //     std::cout << b << " ";
+    // }
+    // std::cout << "\n";
 }
 
 void test_inertial_flow()
@@ -235,25 +235,26 @@ void test_simd_bf()
 {
     int n = 8;
     crp::AdjacencyList gr(n);
-    for(int i = 0; i < n - 1; i++) 
+    for (int i = 0; i < n - 1; i++)
     {
         gr[i].push_back({i + 1, 1});
         gr[i + 1].push_back({i, 1});
     }
 
-    std::array<NodeId, SIMD_LEN> start = {0,1,2,3,4,5,6,7};
-    auto nghr = [&](NodeId v, auto f){
-        for(auto [u, weight] : gr[v]) {
+    std::array<NodeId, SIMD_LEN> start = {0, 1, 2, 3, 4, 5, 6, 7};
+    auto nghr = [&](NodeId v, auto f) {
+        for (auto [u, weight] : gr[v])
+        {
             f(u, weight);
         }
     };
     std::cout << "\nBF with SIMD \n";
     BellmanFordSIMD bf(n);
     bf.compute_distance(start, nghr);
-    for(int j = 0; j < 8; j++)
+    for (int j = 0; j < 8; j++)
     {
         auto dist = bf.tentative_distance(j);
-        for(int i = 0; i < SIMD_LEN; i++) 
+        for (int i = 0; i < SIMD_LEN; i++)
         {
             std::cout << dist[i] << " ";
         }
