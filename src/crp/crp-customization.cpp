@@ -58,9 +58,26 @@ void CRPAlgorithm::reoder_nodes(crp::Graph &g, RecursivePartition &partition, st
 
 void CRPAlgorithm::customize()
 {
+    customize(false);
+}
+
+void CRPAlgorithm::customize(bool reorder_nodes)
+{
     // Copy the original graph
     this->fwd_remapped = *g;
-    CRPAlgorithm::reoder_nodes(fwd_remapped, partition, node_mapping, node_inverse_mapping);
+    if (reorder_nodes)
+    {
+        CRPAlgorithm::reoder_nodes(fwd_remapped, partition, node_mapping, node_inverse_mapping);
+    }
+    else
+    {
+        // Identity mapping
+        node_mapping.resize(g->num_nodes());
+        node_inverse_mapping.resize(g->num_nodes());
+        std::iota(node_mapping.begin(), node_mapping.end(), 0);
+        std::iota(node_inverse_mapping.begin(), node_inverse_mapping.end(), 0);
+    }
+
     this->bwd_remapped = fwd_remapped.reversed();
 
     // This is the overlay on the recursive partition with phantom_levels.

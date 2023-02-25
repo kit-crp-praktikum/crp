@@ -115,7 +115,6 @@ struct OverlayStructure
     uint64_t total_memory_bytes();
     uint64_t largest_cell();
 
-
   private:
     using Clique = std::vector<std::vector<Distance>>;
 
@@ -163,6 +162,8 @@ class CRPAlgorithm : public CRPAlgorithmInterface
   public:
     void prepare(Graph *graph, partitioner::GeoData *geo_data) override;
     void customize() override;
+    void customize(bool reorder_nodes);
+
     Distance query(NodeId start, NodeId end) override;
     Path query_path(NodeId start, NodeId end, Distance &out_dist) override;
 

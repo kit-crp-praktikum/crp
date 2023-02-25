@@ -433,7 +433,8 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     }
 
     std::string path = params.data_dir;
-    if(path.back() == '/') path = path.substr(0, path.size() - 1);
+    if (path.back() == '/')
+        path = path.substr(0, path.size() - 1);
     std::string graph_name = path.substr(path.find_last_of("/\\") + 1);
     std::cerr << "graph_name=" << graph_name << "\n";
     std::cerr << "weight=" << params.weight_type << "\n";
@@ -509,9 +510,10 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
 static void handle_precompute_only(CmdLineParams &params, crp::Graph &g, partitioner::GeoData &geo_data)
 {
     int total_number_of_levels = params.algo_params.number_of_levels + params.algo_params.number_of_phantom_levels;
-    crp::RecursivePartition rp(0,0);
-    auto time_partitioner = get_time([&]() {rp =
-        params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);});
+    crp::RecursivePartition rp(0, 0);
+    auto time_partitioner = get_time([&]() {
+        rp = params.algo_params.partitioner(&g, &geo_data, total_number_of_levels, params.algo_params.cells_per_level);
+    });
     std::cerr << "partition_time=" << time_partitioner << "\n";
     {
         crp::OverlayStructure os(&g, rp);
@@ -716,7 +718,7 @@ int main(int argc, char **argv)
 
     crp::CRPAlgorithm algorithm{params.algo_params};
     get_time_debug("preparation", [&] { algorithm.prepare(&g, &geo_data); });
-    get_time_debug("customization", [&] { algorithm.customize(); });
+    get_time_debug("customization", [&] { algorithm.customize(params.reorder_nodes); });
 
     if (params.mode == OperationMode::Verify)
     {
