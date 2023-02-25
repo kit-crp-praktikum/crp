@@ -714,6 +714,7 @@ int main(int argc, char **argv)
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)
     {
         handle_precompute_only(params, g, geo_data);
+        return 0;
     }
 
     crp::CRPAlgorithm algorithm{params.algo_params};
