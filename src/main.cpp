@@ -620,6 +620,11 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
     {
         Distance answer;
         Path path;
+        // there is no valid path to check
+        if(expected == INF && params.unpack != PathUnpackingMode::NoUnpacking) 
+        {
+            return 1;
+        }
 
         switch (params.unpack)
         {
@@ -679,7 +684,6 @@ static void run_queries_benchmark(crp::CRPAlgorithm *algorithm, crp::Graph *g, C
 
     std::vector<uint64_t> query_times(nr_queries);
     run_warmup_queries(algorithm, g->num_nodes(), params);
-
     get_time_debug("queries", [&] {
         Distance answer;
         for (size_t i = 0; i < nr_queries; i++)
