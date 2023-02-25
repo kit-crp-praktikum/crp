@@ -5,9 +5,22 @@
 #include <list>
 #include <map>
 #include <optional>
+#include <vector>
 
 namespace crp
 {
+namespace detail
+{
+template <class T> size_t estimate_memory(const T &t)
+{
+    return sizeof(std::decay_t<T>);
+}
+
+template <class T> size_t estimate_memory(const std::vector<T> &t)
+{
+    return t.size() * sizeof(std::decay_t<T>);
+}
+} // namespace detail
 
 /**
  * Implements a cache which maps keys to values using the LRU strategy.
@@ -32,6 +45,15 @@ template <class Key, class Value> class LRUCache
             std::cerr << "lru_cache_entries=" << indices.size() << std::endl;
             std::cerr << "lru_cache_hits=" << hits << std::endl;
             std::cerr << "lru_cache_queries=" << total_queries << std::endl;
+
+            size_t total_size = 0;
+            for (const auto &it : values)
+            {
+                total_size += detail::estimate_memory(it.first);
+                total_size += detail::estimate_memory(it.second);
+            }
+
+            std::cerr << "lru_cache_memory=" << total_size << std::endl;
         }
     }
 
