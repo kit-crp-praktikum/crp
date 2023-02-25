@@ -42,6 +42,7 @@ template <class Key, class Value> class LRUCache
     {
         if (total_queries > 0)
         {
+            std::cerr << "lru_cache_limit=" << limit << std::endl;
             std::cerr << "lru_cache_entries=" << indices.size() << std::endl;
             std::cerr << "lru_cache_hits=" << hits << std::endl;
             std::cerr << "lru_cache_queries=" << total_queries << std::endl;

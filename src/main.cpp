@@ -481,38 +481,45 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     {
         if (pos != argc - 1 && std::string("original") == argv[pos + 1])
         {
-            std::cerr << "Using original path unpacking strategy" << std::endl;
             params.unpack = PathUnpackingMode::UnpackOriginal;
         }
         else if (pos != argc - 1 && std::string("original-cache") == argv[pos + 1])
         {
-            std::cerr << "Using original path unpacking strategy with cache" << std::endl;
             params.unpack = PathUnpackingMode::UnpackOriginalCache;
+        }
+        else if (pos != argc - 1 && std::string("experimental") == argv[pos + 1])
+        {
+            params.unpack = PathUnpackingMode::UnpackExperimental;
         }
         else if (pos != argc - 1 && std::string("experimental-cache") == argv[pos + 1])
         {
-            std::cerr << "Using experimental path unpacking strategy with cache" << std::endl;
             params.unpack = PathUnpackingMode::UnpackExperimentalCache;
         }
-        else
-        {
-            std::cerr << "Using experimental path unpacking strategy" << std::endl;
-            params.unpack = PathUnpackingMode::UnpackExperimental;
+        else {
+            std::cerr << "Error, there is no path-unpacking strategy named: " << argv[pos + 1] << std::endl;
+            std::exit(-1);
         }
+    }
+    if (params.unpack == PathUnpackingMode::NoUnpacking)
+    {
+        std::cerr << "path_unpacking=no-unpacking" << "\n";
+    }
+    else 
+    {
+        std::cerr << "path_unpacking=" << argv[pos + 1] << "\n";
     }
 
     pos = find_argument_index(argc, argv, ' ', "warmup");
     if (pos != -1 && pos != argc - 1)
     {
         params.warmup_queries = parse_integer_or_bail(argv[pos + 1]);
-        std::cerr << "Using " << params.warmup_queries << " warmup queries." << std::endl;
     }
+    std::cerr << "warmup_queries=" << params.warmup_queries << "\n";
 
     pos = find_argument_index(argc, argv, ' ', "cache-size");
     if (pos != -1 && pos != argc - 1)
     {
         int cache_size = parse_integer_or_bail(argv[pos + 1]);
-        std::cerr << "Setting cache size to " << cache_size << std::endl;
         crp::CRPAlgorithm::set_cache_size(cache_size);
     }
 
