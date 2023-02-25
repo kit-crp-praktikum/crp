@@ -27,14 +27,21 @@ template <class Key, class Value> class LRUCache
 
     ~LRUCache()
     {
-        std::cerr << "LRU cache has " << indices.size() << " elements in the end." << std::endl;
+        if (total_queries > 0)
+        {
+            std::cerr << "lru_cache_entries=" << indices.size() << std::endl;
+            std::cerr << "lru_cache_hits=" << hits << std::endl;
+            std::cerr << "lru_cache_queries=" << total_queries << std::endl;
+        }
     }
 
     Value *get_value(const Key &key)
     {
+        ++total_queries;
         auto it = indices.find(key);
         if (it != indices.end())
         {
+            ++hits;
             auto list_it = it->second;
             // Push to the front
             if (list_it != values.begin())
@@ -62,6 +69,8 @@ template <class Key, class Value> class LRUCache
   private:
     using ListType = std::list<std::pair<Value, Key>>;
     using ListIterator = typename ListType::iterator;
+    size_t hits = 0;
+    size_t total_queries = 0;
 
     void remove(ListIterator it)
     {

@@ -50,14 +50,18 @@ Argument description:
 -h, --help Show a help message like this one.
 --dump-partition Only generate the partition of the graph and dump the data on stdout.
 --dump-customization Dump customization data on stdout.
---path-unpacking <|original> Unpack paths during benchmark and verification instead of computing shortest
-                        distances only. If original is set, the original CRP algorithm is used.
+--path-unpacking <|original|original-cache|experimental|experimental-cache> Unpack paths during benchmark and
+                verification instead of computing shortest distances only. If original is set, the experimental
+                CRP algorithm is used.
 
 --iflow-lines number of lines used for Inertial Flow
 --iflow-size ratio in (0.0, 0.5) of block size of one part
 
 --kahip-mode sets mode of KaHIPa: eco, ecosocial, fast, fastsocial, strong, strongsocial
 --kahip-imbalance imbalance allowed during partitioning with KaHIPa
+
+--warmup-queries N Number of random queries to execute to warm up cache.
+--cache-size N The maximal number of paths to store in the path cache.
 )";
 }
 
@@ -502,6 +506,14 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
     {
         params.warmup_queries = parse_integer_or_bail(argv[pos + 1]);
         std::cerr << "Using " << params.warmup_queries << " warmup queries." << std::endl;
+    }
+
+    pos = find_argument_index(argc, argv, ' ', "cache-size");
+    if (pos != -1 && pos != argc - 1)
+    {
+        int cache_size = parse_integer_or_bail(argv[pos + 1]);
+        std::cerr << "Setting cache size to " << cache_size << std::endl;
+        crp::CRPAlgorithm::set_cache_size(cache_size);
     }
 
     return params;

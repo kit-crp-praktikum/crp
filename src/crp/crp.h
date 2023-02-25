@@ -184,6 +184,9 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     static void reoder_nodes(crp::Graph &g, RecursivePartition &partition, std::vector<NodeId> &node_mapping,
                              std::vector<NodeId> &inverse_mapping);
 
+    // Set the cache size. Must be at least 1!
+    static void set_cache_size(size_t size);
+
   private:
     CRPAlgorithmParams params;
 
