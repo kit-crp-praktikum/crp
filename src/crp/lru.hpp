@@ -80,6 +80,13 @@ template <class Key, class Value> class LRUCache
 
     void push_value(const Key &key, Value &&value)
     {
+        if (auto existing = get_value(key))
+        {
+            *existing = value;
+            return;
+        }
+
+        assert(indices.count(key) == 0);
         if (values.size() == limit)
         {
             remove(std::prev(values.end()));
