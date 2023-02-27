@@ -677,7 +677,7 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
         }
     });
 #ifdef PRINT_EDGES
-    return 0;
+    return;
 #endif
     std::cout << correct << " out of " << nr_queries << " queries are correct." << std::endl;
 }
