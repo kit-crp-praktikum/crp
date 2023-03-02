@@ -102,16 +102,17 @@ def plot_partition_and_border(graph_data, plot_parameter, level):
 	if graph_name == "germany":
 		#draw borders of germany
 		world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
-		ax = gdf.plot(color=gdf.Color, markersize=markersize, figsize=(24, 12))
-		ax = border_gdf.plot(ax=ax, color=border_gdf.Color, markersize=markersize, figsize=(24, 12))
+		ax = gdf.plot(color=gdf.Color, markersize=markersize, figsize=(12, 12))
+		ax = border_gdf.plot(ax=ax, color=border_gdf.Color, markersize=markersize, figsize=(12, 12))
 		world[world.name == 'Germany'].plot(ax=ax,  facecolor="none", edgecolor='black', linewidth=2)
 	else:
-		ax = gdf.plot(color=gdf.Color, markersize=markersize, figsize=(24, 12))
-		ax = border_gdf.plot(ax=ax, color=border_gdf.Color, markersize=markersize, figsize=(24, 12))
+		ax = gdf.plot(color=gdf.Color, markersize=markersize, figsize=(12, 12))
+		ax = border_gdf.plot(ax=ax, color=border_gdf.Color, markersize=markersize, figsize=(12, 12))
 
 	#save plot
 	file_name = output_name + ".png"
-	plt.savefig(file_name)
+	plt.axis('off')
+	plt.savefig(file_name, bbox_inches=0)
 	print(f"--> wrote plot to {file_name}")
 ### Plotting ###
 
@@ -212,7 +213,7 @@ if args.edge_list != None:
 # visualize partition
 else:
 	levels = min(args.levels, args.max_level)
-	for lv in range(levels):
+	for lv in range(0, levels):
 		output_name = "{}_lv_{}_c_{}".format(graph_data.name, lv, args.cells)
 		plot_parameters = PlotParameter(output_name, args.markersize, args.sample)
 		plot_partition_and_border(graph_data, plot_parameters, lv)
