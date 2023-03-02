@@ -495,16 +495,18 @@ CmdLineParams load_parameters_from_cmdline(int argc, char **argv)
         {
             params.unpack = PathUnpackingMode::UnpackExperimentalCache;
         }
-        else {
+        else
+        {
             std::cerr << "Error, there is no path-unpacking strategy named: " << argv[pos + 1] << std::endl;
             std::exit(-1);
         }
     }
     if (params.unpack == PathUnpackingMode::NoUnpacking)
     {
-        std::cerr << "path_unpacking=no-unpacking" << "\n";
+        std::cerr << "path_unpacking=no-unpacking"
+                  << "\n";
     }
-    else 
+    else
     {
         std::cerr << "path_unpacking=" << argv[pos + 1] << "\n";
     }
@@ -628,7 +630,7 @@ static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdL
         Distance answer;
         Path path;
         // there is no valid path to check
-        if(expected == INF && params.unpack != PathUnpackingMode::NoUnpacking) 
+        if (expected == INF && params.unpack != PathUnpackingMode::NoUnpacking)
         {
             return 1;
         }
@@ -730,8 +732,7 @@ int main(int argc, char **argv)
     std::cerr << "\n";
     // Load graph
     std::filesystem::path dir = params.data_dir;
-    crp::Graph g((dir / "first_out").generic_string(), (dir / "head").generic_string(),
-                 (dir / params.weight_type).generic_string());
+    auto g = load_graph_from_directory(params.data_dir, params.weight_type);
     partitioner::GeoData geo_data((dir / "latitude").generic_string(), (dir / "longitude").generic_string());
 
     if (params.mode == OperationMode::PartitionOnly or params.mode == OperationMode::CustomizeOnly)

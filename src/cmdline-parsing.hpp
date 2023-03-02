@@ -1,4 +1,5 @@
 #pragma once
+#include "graph.h"
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -85,4 +86,10 @@ inline int find_required_argument(int argc, char **argv, char short_arg, std::st
     }
 
     return pos;
+}
+
+inline crp::Graph load_graph_from_directory(std::filesystem::path dir, std::string weight_type)
+{
+    return crp::Graph{(dir / "first_out").generic_string(), (dir / "head").generic_string(),
+                      (dir / weight_type).generic_string()};
 }

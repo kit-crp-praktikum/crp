@@ -30,8 +30,7 @@ int main(int argc, char **argv)
 
     check_input_directory_valid(root_dir.generic_string(), weight_type, false);
 
-    crp::Graph g((root_dir / "first_out").generic_string(), (root_dir / "head").generic_string(), (root_dir / weight_type).generic_string());
-
+    auto g = load_graph_from_directory(root_dir, weight_type);
     const int n = g.num_nodes();
     const int nr_ranks = (n <= 1 ? 0 : 31 - __builtin_clz(n - 1)) + 1;
 
