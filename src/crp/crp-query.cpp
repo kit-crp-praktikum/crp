@@ -104,7 +104,11 @@ Path CRPAlgorithm::unpack_shortcut_one_level(NodeId u, NodeId v, LevelId level)
         return [&](NodeId x, auto relaxOp) {
             for (auto [y, w] : directed_graph[x])
             {
-                if (overlay->partition.find_cell_for_node(y, level) == big_cell)
+                const bool y_in_own_cell = overlay->partition.find_cell_for_node(y, level) == big_cell;
+                const bool y_border_node =
+                    (level <= 0 || (overlay->get_internal_id(y, level - 1) != directed_graph.num_nodes()));
+
+                if (y_in_own_cell && y_border_node)
                 {
                     relaxOp(y, w);
                 }
@@ -159,7 +163,7 @@ void CRPAlgorithm::set_cache_size(size_t size)
 
 template <bool use_cache> void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
 {
-    if (level == -1)
+    if (level < 0)
     {
         path.push_back(v);
         return;
