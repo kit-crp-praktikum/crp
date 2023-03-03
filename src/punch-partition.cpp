@@ -92,6 +92,13 @@ int main(int argc, char **argv)
     pos = find_required_argument(argc, argv, 'l', "levels", true);
     const int levels = parse_integer_or_bail(argv[pos + 1]);
 
+    pos = find_argument_index(argc, argv, 'o', "output-levels");
+    int output_levels = levels;
+    if (pos != -1 && pos != argc - 1)
+    {
+        output_levels = parse_integer_or_bail(argv[pos + 1]);
+    }
+
     auto g = load_graph_from_directory(graph_path, "travel_time");
 
     crp::RecursivePartitionMask mask(g.num_nodes());
@@ -128,7 +135,7 @@ int main(int argc, char **argv)
         ++cells_per_level;
     int bits_per_level = 32 - __builtin_clz(cells_per_level - 1);
     std::cerr << "cells_per_level=" << cells_per_level << std::endl;
-    std::cerr << "levels=" << levels << std::endl;
+    std::cerr << "levels=" << output_levels << std::endl;
     std::cerr << "bits_per_level=" << bits_per_level << std::endl;
 
     std::map<Cell, int> nested_cell_id;
@@ -142,7 +149,7 @@ int main(int argc, char **argv)
         }
     }
 
-    for (int level = 0; level < levels; level++)
+    for (int level = levels - output_levels; level < levels; level++)
     {
         for (NodeId i = 0; i < g.num_nodes(); i++)
         {
