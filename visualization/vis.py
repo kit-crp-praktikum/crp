@@ -18,7 +18,7 @@ def parse_cmd():
 	argParser.add_argument("-l", "--levels",   default=1, type=int, help="number of partition levels")
 	argParser.add_argument("-c", "--cells",               type=int, help="number of cells per level")
 	argParser.add_argument("-s", "--sample",   default=1, type=int, help="take only every nth datapoint for faster plotting")
-	argParser.add_argument("-m", "--markersize",   default=4, type=int, help="size of the dots in the plot")
+	argParser.add_argument("-m", "--markersize",   default=4, type=float, help="size of the dots in the plot")
 	argParser.add_argument("-x", "--max_level",   default=10**9, type=int, help="draws level 0,..., min(levels, max_levels) - 1")
 	argParser.add_argument("-e", "--edge_list", help="binary file of edges to visualize, format: fwd_size bwd_size (edges of fwd) (edges of bwd)")
 	argParser.add_argument("-w", "--linewidth", default=0.05, type=float, help="width of drawn edges")
@@ -152,8 +152,17 @@ class PlotParameter:
 		self.sample = sample
 
 # longitude x, latitude y
-def draw_edges(edge_list, edge_colors, longitude, latitude, linewidth, output_name):
+def draw_edges(graph_data, sample, edge_list, edge_colors, linewidth, markersize, output_name):
 	assert(len(edge_list) == 2 * len(edge_colors))
+
+	longitude = graph_data.longitude
+	latitude = graph_data.latitude
+	node_longitude = graph_data.longitude[::sample]
+	node_latitude = graph_data.latitude[::sample]
+
+	#dataframes for graph nodes
+	df = pd.DataFrame({'Longitude':node_longitude, 'Latitude':node_latitude, 'Color':'black' })
+	gdf_nodes = geopandas.GeoDataFrame(df, geometry=geopandas.points_from_xy(df.Longitude, df.Latitude))
 
 	# write edge into LineString format
 	edges= list()
@@ -164,12 +173,14 @@ def draw_edges(edge_list, edge_colors, longitude, latitude, linewidth, output_na
 	# create dataframe
 	gdf = geopandas.GeoDataFrame({'Edges':edges,'Color':edge_colors }, geometry='Edges')
 
-	# create plot
-	world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
-	ax = gdf.plot(color=gdf.Color, figsize=(24, 12), linewidth=linewidth)
-	world[world.name == 'Germany'].plot(ax=ax,  facecolor="none", edgecolor='black', linewidth=2)
-	#linewidth=1
+	# draw nodes
+	ax = gdf_nodes.plot(color=gdf_nodes.Color, markersize=markersize, figsize=(12, 12))
+	
+	# draw query edges
+	ax = gdf.plot(ax=ax, color=gdf.Color, linewidth=linewidth)
+	
 	file_name = output_name + ".png"
+	plt.axis('off')
 	plt.savefig(file_name)
 	print(f"--> wrote plot to {file_name}")
 
@@ -208,7 +219,7 @@ if args.edge_list != None:
 
 	edge_colors = ['red' for _ in range(num_fwd // 2)] + ['blue' for _ in range(num_bwd // 2)]
 	output_name = "query_{}_lv_{}_c_{}".format(graph_data.name, args.levels, args.cells)
-	draw_edges(edges, edge_colors, longitude, latitude, args.linewidth, output_name)
+	draw_edges(graph_data, args.sample, edges, edge_colors, args.linewidth, args.markersize, output_name)
 
 # visualize partition
 else:
