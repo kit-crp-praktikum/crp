@@ -166,9 +166,42 @@ void CRPAlgorithm::reset_cache_statistics()
     cache.reset_stats();
 }
 
+static bool is_cut_edge(crp::OverlayStructure &os, NodeId start, NodeId end)
+{
+    int unpack_level = os.partition.find_level_differing(start, end) + 1;
+    if (unpack_level == os.partition.number_of_levels)
+    {
+        return true;
+    }
+
+    const NodeId invalid_iid = os.partition.mask.size();
+
+    if (os.get_internal_id(start, unpack_level) == invalid_iid || os.get_internal_id(end, unpack_level) == invalid_iid)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+// assumes it is not a cut edge!
+static int determine_unpack_level(crp::OverlayStructure &os, NodeId start, NodeId end)
+{
+    int unpack_level = os.partition.find_level_differing(start, end) + 1;
+    const NodeId invalid_iid = os.partition.mask.size();
+    while (unpack_level + 1 < os.partition.number_of_levels &&
+           os.get_internal_id(start, unpack_level + 1) != invalid_iid &&
+           os.get_internal_id(end, unpack_level + 1) != invalid_iid)
+    {
+        ++unpack_level;
+    }
+
+    return unpack_level;
+}
+
 template <bool use_cache> void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
 {
-    if (level < 0)
+    if (level < 0 || is_cut_edge(*overlay, u, v))
     {
         path.push_back(v);
         return;
@@ -308,7 +341,38 @@ template <bool use_cache> std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start
     }
 
     // run bidijkstra
-    auto [middle, dist] = _query<true>(start, end);
+    if (is_cut_edge(*overlay, start, end))
+    {
+        return {start, end};
+    }
+
+    const int unpack_level = determine_unpack_level(*overlay, start, end);
+    const int unpack_cell = overlay->partition.find_cell_for_node(start, unpack_level);
+
+    const auto &normal_fwd_scan = get_fwd_scan(start, end);
+    const auto &normal_bwd_scan = get_bwd_scan(start, end);
+
+    const auto &constrained_fwd_scan = [&](NodeId u, auto relaxOp) {
+        normal_fwd_scan(u, [&](NodeId v, Distance dist) {
+            if (overlay->get_cell_for_node(v, unpack_level) == unpack_cell)
+            {
+                relaxOp(v, dist);
+            }
+        });
+    };
+
+    const auto &constrained_bwd_scan = [&](NodeId u, auto relaxOp) {
+        normal_bwd_scan(u, [&](NodeId v, Distance dist) {
+            if (overlay->get_cell_for_node(v, unpack_level) == unpack_cell)
+            {
+                relaxOp(v, dist);
+            }
+        });
+    };
+
+    auto [middle, dist] =
+        bidir_dijkstra->compute_distance_target<true>(start, end, constrained_fwd_scan, constrained_bwd_scan);
+
     auto unpacked_path = bidir_dijkstra->unpack(start, end, middle);
 
     if constexpr (use_cache)
