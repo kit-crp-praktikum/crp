@@ -13,13 +13,14 @@ import pandas as pd
 import argparse
 
 
+plt.rcParams.update({'font.size': 14})
+
 # command line interface
 def parse_cmd():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-r', '--ranksize', default=1, type=int, help='size of each rank')
     arg_parser.add_argument('-i', '--input', nargs="*", help="files containing running times to compare")
     arg_parser.add_argument('-n', '--name', nargs="*",  help="names of results being compared")
-    arg_parser.add_argument('-d', '--diagram', default='Dijkstra Rank', help='diagram name')
 
     args = arg_parser.parse_args()
     print("args=%s" % args)
@@ -36,8 +37,8 @@ def read_binary(path, type):
 # create data of one file
 def create_single_dataframe(times, rank_size, name):
     data = []
-    for i in range(len(times)):
-        data.append([times[i], '2^' + str(i//rank_size), name])
+    for i in range(7*rank_size, len(times)):
+        data.append([times[i], '$2^{' + str(i//rank_size) + '}$', name])
 
     # convert list to DataFrame
     df = pd.DataFrame(data, columns=['time', 'rank', 'name'])
@@ -57,18 +58,22 @@ def create_dataframe(input_files, rank_size, names):
 
 # make dijkstra rank box plot
 # data contains lists of times for each rank
-def plot_dijkstra_rank(data, name):
+def plot_dijkstra_rank(data):
     # set plot size
-    plt.figure(figsize=(16, 7))
+    fig = plt.figure(figsize=(16, 7))
 
     # convert y-axis to Logarithmic scale
     plt.yscale("log")
     plt.grid(which="minor", linestyle="--")
 
     # create a grouped boxplot
-    sns.boxplot(x=data['rank'], y=data['time'], hue=data['name'])
+    ax = sns.boxplot(x=data['rank'], y=data['time'], hue=data['name'])
 
-    plt.title(name)
+    # Remove name of the hue from the plot legend
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles=handles, labels=labels)
+
+    # plt.title(name)
     plt.xlabel('Dijkstra Rank')
     plt.ylabel('Query time (microsec)')
 
@@ -80,4 +85,4 @@ def plot_dijkstra_rank(data, name):
 # main program
 args = parse_cmd()
 df = create_dataframe(args.input, args.ranksize, args.name)
-plot_dijkstra_rank(df, args.diagram)
+plot_dijkstra_rank(df)
