@@ -161,6 +161,11 @@ void CRPAlgorithm::set_cache_size(size_t size)
     cache = LRUCache<std::pair<NodeId, NodeId>, Path>{size};
 }
 
+void CRPAlgorithm::reset_cache_statistics()
+{
+    cache.reset_stats();
+}
+
 template <bool use_cache> void CRPAlgorithm::unpack_shortcut_recursive(NodeId u, NodeId v, LevelId level, Path &path)
 {
     if (level < 0)

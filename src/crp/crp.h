@@ -187,6 +187,9 @@ class CRPAlgorithm : public CRPAlgorithmInterface
     // Set the cache size. Must be at least 1!
     static void set_cache_size(size_t size);
 
+    // Reset LRU cache statistics.
+    static void reset_cache_statistics();
+
   private:
     CRPAlgorithmParams params;
 

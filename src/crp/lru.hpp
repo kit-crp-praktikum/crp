@@ -96,6 +96,12 @@ template <class Key, class Value> class LRUCache
         indices[key] = values.begin();
     }
 
+    void reset_stats()
+    {
+        hits = 0;
+        total_queries = 0;
+    }
+
   private:
     using ListType = std::list<std::pair<Value, Key>>;
     using ListIterator = typename ListType::iterator;

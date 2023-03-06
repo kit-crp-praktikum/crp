@@ -605,6 +605,8 @@ static void run_warmup_queries(crp::CRPAlgorithm *algorithm, size_t n, CmdLinePa
             }
         }
     });
+
+    crp::CRPAlgorithm::reset_cache_statistics();
 }
 
 static void run_queries_verify(crp::CRPAlgorithm *algorithm, crp::Graph *g, CmdLineParams &params)
