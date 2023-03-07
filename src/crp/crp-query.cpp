@@ -331,6 +331,11 @@ std::vector<NodeId> CRPAlgorithm::_query_path_experimental(NodeId start, NodeId 
 
 template <bool use_cache> std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start, NodeId end)
 {
+    if (is_cut_edge(*overlay, start, end))
+    {
+        return {start, end};
+    }
+
     if constexpr (use_cache)
     {
         auto cached = cache.get_value({start, end});
@@ -341,11 +346,6 @@ template <bool use_cache> std::vector<NodeId> CRPAlgorithm::_unpack(NodeId start
     }
 
     // run bidijkstra
-    if (is_cut_edge(*overlay, start, end))
-    {
-        return {start, end};
-    }
-
     const int unpack_level = determine_unpack_level(*overlay, start, end);
     const int unpack_cell = overlay->partition.find_cell_for_node(start, unpack_level);
 
